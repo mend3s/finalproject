@@ -109,7 +109,7 @@ CREATE TABLE IF NOT EXISTS metricas_desempenho (
 ''')
 
 # Carregando dados
-df = pd.read_csv("resumo_anual_2025.csv", delimiter=';', encoding='latin')
+df = pd.read_csv("resumo_anual_2025_tratado.csv", delimiter=';', encoding='utf-8')
 
 df.fillna({
     'DISTÂNCIA VOADA (KM)': 0, 
