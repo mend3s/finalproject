@@ -75,6 +75,56 @@ class ANACDataProcessor:
             print(f"❌ Erro ao carregar dados: {e}")
             return False
 
+    def remove_low_quality_records(self, min_completeness=50):
+        """Remove registros com muitos dados faltantes"""
+        print(f"🔍 Removendo registros com menos de {min_completeness}% de dados...")
+        
+        initial_count = len(self.df)
+        
+        # Calcular completude por linha de forma mais robusta
+        total_columns = len(self.df.columns)
+        print(f"   📊 Total de colunas: {total_columns}")
+        
+        # Contar campos preenchidos por linha (método mais preciso)
+        completeness_list = []
+        rows_to_remove = []
+        
+        for index, row in self.df.iterrows():
+            filled_count = 0
+            for value in row:
+                # Verificar se o valor está preenchido
+                if pd.notna(value) and str(value).strip() != '' and str(value).strip() != 'nan':
+                    filled_count += 1
+            
+            completeness = (filled_count / total_columns) * 100
+            completeness_list.append(completeness)
+            
+            # Marcar para remoção se abaixo do limite
+            if completeness < min_completeness:
+                rows_to_remove.append(index)
+                print(f"   🗑️  Linha {index + 1}: {completeness:.1f}% completa ({filled_count}/{total_columns}) - SERÁ REMOVIDA")
+        
+        # Mostrar estatísticas de completude
+        avg_completeness = sum(completeness_list) / len(completeness_list)
+        print(f"   📊 Completude média: {avg_completeness:.1f}%")
+        print(f"   📊 Encontrados {len(rows_to_remove)} registros com <{min_completeness}% de dados")
+        
+        # Remover registros problemáticos
+        if rows_to_remove:
+            self.df = self.df.drop(rows_to_remove).reset_index(drop=True)
+            print(f"   ✅ Removidos {len(rows_to_remove)} registros problemáticos")
+        else:
+            print(f"   ✅ Nenhum registro encontrado abaixo de {min_completeness}%")
+        
+        final_count = len(self.df)
+        removed_count = initial_count - final_count
+        
+        print(f"   📊 Registros iniciais: {initial_count}")
+        print(f"   📊 Registros finais: {final_count}")
+        print(f"   📊 Total removido: {removed_count}")
+        
+        return removed_count
+
     def fix_column_names(self):
         """Corrige os nomes das colunas com problemas de encoding"""
         print("🔧 Corrigindo nomes das colunas...")
@@ -253,8 +303,7 @@ class ANACDataProcessor:
             print(f"❌ Erro ao salvar CSV: {e}")
             return False
 
-
-    def process_all(self, save_to_db=True, save_to_csv=True, table_name='voos_anac', csv_output_path=None):
+    def process_all(self, save_to_db=True, save_to_csv=True, table_name='voos_anac', csv_output_path=None, min_completeness=70):
         """Executa todo o pipeline de tratamento de dados"""
         print("🚀 INICIANDO PROCESSAMENTO DOS DADOS ANAC")
         print("=" * 50)
@@ -263,28 +312,29 @@ class ANACDataProcessor:
         if not self.load_data():
             return False
         
-        # 2. Corrigir nomes das colunas
+        # 2. Remover registros com muitos dados faltantes
+        self.remove_low_quality_records(min_completeness)
+        
+        # 3. Corrigir nomes das colunas
         self.fix_column_names()
         
-        # 3. Tratar dados numéricos
+        # 4. Tratar dados numéricos
         self.clean_numeric_data()
         
-        # 4. Tratar dados categóricos
+        # 5. Tratar dados categóricos
         self.clean_categorical_data()
         
-        # 5. Validar dados
+        # 6. Validar dados
         self.validate_data()
         
-        # 6. Gerar relatório
+        # 7. Gerar relatório
         self.create_summary_report()
         
-        # 7. Salvar CSV tratado (opcional)
+        # 8. Salvar CSV tratado (opcional)
         if save_to_csv:
             csv_success = self.save_to_csv(csv_output_path)
             if not csv_success:
                 print("⚠️  Falha ao salvar CSV, mas continuando...")
-        
-        
         
         print(f"\n🎉 PROCESSAMENTO CONCLUÍDO COM SUCESSO!")
         return True
@@ -301,5 +351,8 @@ if __name__ == "__main__":
         csv_file_path='resumo_anual_2025.csv',
     )
  
-    success = processor.process_all(save_to_csv=True, save_to_db=False)
-    
+    success = processor.process_all(
+        save_to_csv=True, 
+        save_to_db=False,
+        min_completeness=70  # Remove linhas com menos de 70% de dados
+    )
