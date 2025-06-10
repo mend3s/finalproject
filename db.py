@@ -177,18 +177,18 @@ for _, row in df.iterrows():
 
 
 for _, row in df.iterrows():
-    if row['NATUREZA'] == 'BRASILEIRA':
+    if row['NATUREZA'] == 'DOMÉSTICA':
         cursor.execute('''
-        INSERT INTO voo_nacional (empresa_sigla, ano, mes, aeroporto_origem_sigla, aeroporto_destino_sigla, natureza, grupo_voo, distancia_voada_km, combustivel_litros, decolagens, horas_voadas)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (row['EMPRESA (SIGLA)'], row['ANO'], row['MÊS'], row['AEROPORTO DE ORIGEM (SIGLA)'], row['AEROPORTO DE DESTINO (SIGLA)'], row['NATUREZA'], 
+        INSERT INTO voo_nacional (empresa_sigla, ano, mes, aeroporto_origem_sigla, aeroporto_destino_sigla, grupo_voo, distancia_voada_km, combustivel_litros, decolagens, horas_voadas)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (row['EMPRESA (SIGLA)'], row['ANO'], row['MÊS'], row['AEROPORTO DE ORIGEM (SIGLA)'], row['AEROPORTO DE DESTINO (SIGLA)'], 
               row['GRUPO DE VOO'], row['DISTÂNCIA VOADA (KM)'], row['COMBUSTÍVEL (LITROS)'], row['DECOLAGENS'], row['HORAS VOADAS']))
     
-    elif row['NATUREZA'] == 'ESTRANGEIRA':
+    elif row['NATUREZA'] == 'INTERNACIONAL':
         cursor.execute('''
-        INSERT INTO voo_internacional (empresa_sigla, ano, mes, aeroporto_origem_sigla, aeroporto_destino_sigla, natureza, grupo_voo, distancia_voada_km, combustivel_litros, decolagens, horas_voadas)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (row['EMPRESA (SIGLA)'], row['ANO'], row['MÊS'], row['AEROPORTO DE ORIGEM (SIGLA)'], row['AEROPORTO DE DESTINO (SIGLA)'], row['NATUREZA'], 
+        INSERT INTO voo_internacional (empresa_sigla, ano, mes, aeroporto_origem_sigla, aeroporto_destino_sigla, grupo_voo, distancia_voada_km, combustivel_litros, decolagens, horas_voadas)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (row['EMPRESA (SIGLA)'], row['ANO'], row['MÊS'], row['AEROPORTO DE ORIGEM (SIGLA)'], row['AEROPORTO DE DESTINO (SIGLA)'], 
               row['GRUPO DE VOO'], row['DISTÂNCIA VOADA (KM)'], row['COMBUSTÍVEL (LITROS)'], row['DECOLAGENS'], row['HORAS VOADAS']))
 
 

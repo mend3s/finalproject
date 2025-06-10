@@ -30,7 +30,39 @@ st.sidebar.button("⛽ Eficiencia Combustivel", on_click=lambda: st.session_stat
 st.sidebar.button("📊 Gráficos Clientes", on_click=lambda: st.session_state.update(aba_ativa='graficos_clientes'))
 st.sidebar.button("🧑 Cliente", on_click=lambda: st.session_state.update(aba_ativa='cliente'))
 st.sidebar.button("📦 Produtos", on_click=lambda: st.session_state.update(aba_ativa='produtos'))
+if st.session_state.aba_ativa == 'home':
+    tab1, tab2 = st.tabs(["Vôos Nacionais", "Vôos Internacionais"])
 
+
+    with tab1:
+        st.markdown(
+    """
+    <style>
+    [data-testid="stSidebar"] {
+        background-color: #003366;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)    
+        st.subheader("Home", divider=True)
+        # Query original (corrigida)
+        st.markdown("### Total de passageiros pagos/gratuitos por mês")
+        query = """
+        SELECT 
+        v.ano, 
+        v.mes, 
+        SUM(c.passageiros_pagos) AS total_pagos, 
+        SUM(c.passageiros_gratis) AS total_gratis
+        FROM voo_nacional v 
+        LEFT JOIN carga_passageiros c ON v.voo_id = c.voo_id
+        GROUP BY v.ano, v.mes
+        ORDER BY v.ano, v.mes
+        """
+        df_passageiros = pd.read_sql_query(query, conn)
+        st.write(df_passageiros)
+        
+        
 
 if st.session_state.aba_ativa == 'eficiencia_comb':
 
