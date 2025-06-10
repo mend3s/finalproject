@@ -4,11 +4,23 @@ import streamlit as st
 from datetime import datetime
 import matplotlib.pyplot as plt
 import seaborn as sns
+<<<<<<< Updated upstream
+=======
+import folium
+import streamlit as st
+from streamlit_folium import st_folium
+from streamlit_folium import folium_static
+import plotly.express as px
+import plotly.graph_objects as go
+from matplotlib.patches import Patch
+
+>>>>>>> Stashed changes
 
 conn = sqlite3.connect("dados_voo.db")
 cursor = conn.cursor()
 
 
+<<<<<<< Updated upstream
 st.sidebar.title("📋Menu")
 st.sidebar.title("Categorias")
 st.markdown(
@@ -21,6 +33,45 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )        
+=======
+
+st.set_page_config(
+    page_title="Análise de Dados de Voos",
+    page_icon="✈️",
+    layout="wide"
+)
+
+# CSS customizado apenas para a aba home
+home_css = """
+<style>
+    /* Metrics styling */
+    [data-testid="metric-container"] {
+        background-color: #f8fafc;
+        border: 1px solid #e2e8f0;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+    }
+    
+    /* Big numbers styling */
+    .metric-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 1.5rem;
+        border-radius: 1rem;
+        color: white;
+        text-align: center;
+        margin: 0.5rem 0;
+    }
+    
+    .metric-card h3 {
+        margin: 0;
+        font-size: 2.5rem;
+        font-weight: bold;
+        color: white;
+    }
+    
+ """     
+>>>>>>> Stashed changes
 if 'aba_ativa' not in st.session_state:
     st.session_state.aba_ativa = 'home'  # valor inicial padrão
     
@@ -89,4 +140,9 @@ if st.session_state.aba_ativa == 'eficiencia_comb':
 
 
 
+<<<<<<< Updated upstream
             
+=======
+            
+
+>>>>>>> Stashed changes
