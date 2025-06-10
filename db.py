@@ -4,6 +4,8 @@ import streamlit as st
 from datetime import datetime
 import matplotlib.pyplot as plt
 import seaborn as sns
+import plotly.express as px
+
 
 conn = sqlite3.connect("dados_voo.db")
 cursor = conn.cursor()

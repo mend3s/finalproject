@@ -1,0 +1,87 @@
+✈️ 1. Análises Operacionais
+🔹 Volume de Passageiros
+Total de passageiros pagos/gratuitos por mês ou por ano
+
+Comparação entre voos nacionais vs. internacionais
+
+Tendência de passageiros ao longo do tempo
+
+Gráfico sugerido: Linha temporal ou gráfico de barras agrupado
+Filtro: Ano, tipo de voo, empresa aérea
+
+🔹 Voos por Empresa
+Quais empresas operam mais voos?
+
+Qual o volume médio de passageiros por voo por empresa?
+
+Gráfico sugerido: Barras horizontais ou treemap
+Filtro: Mês/ano, nacionalidade da empresa
+
+🔹 Decolagens e Distância Voada
+Total de decolagens por mês
+
+Distância total voada por rota ou por empresa
+
+Gráfico sugerido: Linha temporal / Mapa interativo (origem vs destino)
+Filtro: Aeroporto de origem, empresa, tipo de voo
+
+📦 2. Análises de Carga e Correio
+🔹 Volume de Carga e Correio Transportado
+Comparação entre carga paga, carga gratuita e correio
+
+Carga por km voado (eficiência logística)
+
+Gráfico sugerido: Barras empilhadas ou scatter plot
+Filtro: Grupo de voo, tipo de voo
+
+⛽ 3. Eficiência e Consumo
+🔹 Consumo de Combustível
+Relação entre combustível (litros) e distância voada
+
+Eficiência por empresa ou tipo de aeronave (se disponível)
+
+Gráfico sugerido: Dispersão (scatter), gráfico de linha por tempo
+Filtro: Ano, empresa
+
+🚫 4. Análise de Voos Improdutivos
+Percentual de voos improdutivos em relação ao total
+
+Distribuição de voos improdutivos por empresa ou região
+
+Gráfico sugerido: Pizza ou barras empilhadas
+Filtro: Região, ano, tipo de voo
+
+🌎 5. Rota e Geografia
+Mapa interativo mostrando as principais rotas (origem → destino)
+
+Fluxo de passageiros ou carga entre regiões (ex: Norte ↔ Sudeste)
+
+Gráfico sugerido: Mapa com linhas (Plotly ou pydeck), Sankey Diagram
+Filtro: Região, continente, nacional vs internacional
+
+🧠 6. KPIs e Métricas Gerenciais
+Taxa média de ocupação = RPK / ASK
+
+Payload médio por voo
+
+Passageiros por km voado
+
+Assentos disponíveis vs. passageiros reais
+
+Gráfico sugerido: Indicadores (KPI cards), barras comparativas
+Filtro: Por empresa, por mês
+
+✔️ Resumo dos Filtros Interessantes:
+Ano e Mês
+
+Empresa aérea (sigla ou nome)
+
+Aeroporto de origem/destino
+
+Tipo de voo (nacional/internacional)
+
+Grupo de voo (produtivo/improdutivo)
+
+Região ou país
+
+Natureza (comercial, cargueiro, etc.)

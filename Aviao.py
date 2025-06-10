@@ -11,7 +11,7 @@ class ANACDataProcessor:
     
     def __init__(self, csv_file_path, db_path=None):
         self.csv_file_path = csv_file_path
-        self.db_path = db_path or 'anac_database.db'
+        self.db_path = db_path or 'dados_voo.db'
         self.df = None
         
         # Mapeamento para correção de encoding
