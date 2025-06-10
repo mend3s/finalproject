@@ -5,22 +5,18 @@ import streamlit as st
 from datetime import datetime
 import matplotlib.pyplot as plt
 import seaborn as sns
-<<<<<<< Updated upstream
 import plotly.express as px
 import plotly.graph_objects as go
 from matplotlib.patches import Patch
-=======
 import folium
 import streamlit as st
 from streamlit_folium import st_folium
 from streamlit_folium import folium_static
 
->>>>>>> Stashed changes
 
 conn = sqlite3.connect("dados_voo.db")
 cursor = conn.cursor()
 
-<<<<<<< Updated upstream
 #pageconfig
 st.set_page_config(
     page_title="Análise de Dados de Voos",
@@ -104,9 +100,6 @@ st.markdown(
     unsafe_allow_html=True
 )   
      
-=======
-      
->>>>>>> Stashed changes
 if 'aba_ativa' not in st.session_state:
     st.session_state.aba_ativa = 'home'  # valor inicial padrão
     st.session_state.aba_ativa = 'home'  
@@ -1028,11 +1021,5 @@ if st.session_state.aba_ativa == 'rotas':
     st.subheader("Média Geral de Eficiência")
     st.metric(label="Média Geral (km/l)", value=f"{media_eficiencia:.2f}")
 
-<<<<<<< Updated upstream
 # Fechar conexão
 conn.close()
-=======
-
-
-            
->>>>>>> Stashed changes
