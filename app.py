@@ -8,10 +8,12 @@ import streamlit as st
 import streamlit_pills as stp
 import seaborn as sns
 import matplotlib.pyplot as plt
-#from func import functions  # Removido se 'functions' não estiver sendo usado ainda
+from func import functions  # Removido se 'functions' não estiver sendo usado ainda
 import sqlite3
 import plotly.express as px
 import plotly.graph_objects as go
+from sklearn.preprocessing import StandardScaler
+from sklearn.cluster import KMeans
 
 # --- Configuração da Página ---
 st.set_page_config(
@@ -124,12 +126,259 @@ if pagina_atual == "Visão Geral":
     st.dataframe(df_outliers_valor[colunas_para_exibir].sort_values('Transaction_Amount', ascending=False), use_container_width=True, hide_index=True)
 
 elif pagina_atual == "Analise Exploratoria":
-    # MELHORIA 2: Conteúdo da página agora está corretamente nomeado e estruturado.
+    
     st.header("🔬 Análise Exploratória de Dados (EDA)")
-    st.markdown("Diagnóstico dos dados para entender suas características, distribuições e relações iniciais.")
-    # (Aqui você pode inserir o código da Análise Exploratória que desenvolvemos anteriormente)
-    st.info("Espaço reservado para os gráficos da Análise Exploratória: Visão Geral do Dataset, Análise Univariada e Bivariada.")
+    st.markdown("Esta é a **fundação** da nossa análise. Aqui, fazemos um diagnóstico completo dos dados para entender suas características, distribuições e relações iniciais.")
+    
+    # --- 1. CARREGAMENTO DOS DADOS ---
+    df = functions.carregar_dados()
+    
+    if not df.empty:
+        st.subheader("Nível 1: A Visão Geral do Dataset")
+        
+        st.markdown("### KPIs (Indicadores-Chave de Performance)")
+        
+        if 'Timestamp' in df.columns and pd.api.types.is_datetime64_any_dtype(df['Timestamp']) and not df['Timestamp'].empty:
+            data_inicio = df['Timestamp'].min().strftime('%d/%m/%Y')
+            data_fim = df['Timestamp'].max().strftime('%d/%m/%Y')
+            st.info(f"Estas são as métricas essenciais que resumem o nosso banco de dados \n\n📅 **Período em Análise:** de {data_inicio} a {data_fim}")
+        
+        # --------------------------------------------------------------------------
+        # ADAPTAÇÃO PARA OS CARDS CUSTOMIZADOS
+        # --------------------------------------------------------------------------
+        
+        col1, col2, col3, col4 = st.columns(4)
+        
+        # --- Cálculo das métricas ---
+        total_transacoes = df.shape[0]
+        total_variaveis = df.shape[1]
+        total_fraudes = df['Fraud_Label'].sum()
+        taxa_fraude = (total_fraudes / total_transacoes) * 100 if total_transacoes > 0 else 0
+        
+        # --- Renderização dos cards usando st.markdown e f-strings ---
+        
+        # Card 1: Total de Transações
+        with col1:
+            st.markdown(f"""
+            <div class='kpi-card color-1'>
+                <h3>Total de Transações</h3>
+                <h2>{total_transacoes:,}</h2>
+            </div>
+            """, unsafe_allow_html=True)
 
+        # Card 2: Total de Variáveis
+        with col2:
+            st.markdown(f"""
+            <div class='kpi-card color-2'>
+                <h3>Total de Variáveis</h3>
+                <h2>{total_variaveis}</h2>
+            </div>
+            """, unsafe_allow_html=True)
+
+        # Card 3: Total de Fraudes
+        with col3:
+            st.markdown(f"""
+            <div class='kpi-card color-3'>
+                <h3>Total de Fraudes</h3>
+                <h2>{total_fraudes:,}</h2>
+            </div>
+            """, unsafe_allow_html=True)
+
+        # Card 4: Taxa de Fraude
+        with col4:
+            st.markdown(f"""
+            <div class='kpi-card color-4'>
+                <h3>Taxa de Fraude</h3>
+                <h2>{taxa_fraude:.2f}%</h2>
+            </div>
+            """, unsafe_allow_html=True)
+
+        st.markdown("---")
+        
+        # --- Detalhes Técnicos em Expanders ---
+        st.markdown("#### Detalhes Técnicos do Dataset")
+        
+        with st.expander("👁️ Visualizar Amostra dos Dados"):
+            st.dataframe(df.head(10))
+            st.caption("As 10 primeiras linhas do conjunto de dados.")
+
+        with st.expander("📊 Visualizar Resumo Estatístico (Colunas Numéricas)"):
+            st.dataframe(df.describe())
+            st.caption("Fornece insights como média, mediana e desvio padrão para cada variável numérica.")
+
+        with st.expander("📄 Visualizar Estrutura e Tipos de Dados"):
+            tipos_de_dados = pd.DataFrame(df.dtypes, columns=['Tipo de Dado']).reset_index().rename(columns={'index': 'Nome da Coluna'})
+            st.dataframe(tipos_de_dados)
+            st.caption("Lista de todas as colunas e seus respectivos tipos de dados.")
+        
+        st.markdown("---")
+        
+        st.subheader("Nível 2: Análise Univariada (Perfil de Cada Variável)")
+        st.markdown("Selecione uma variável para investigar suas características, distribuição e outliers em detalhe.")
+        
+        colunas_numericas = df.select_dtypes(include=np.number).columns.tolist()
+        colunas_categoricas = df.select_dtypes(include=['object', 'category']).columns.tolist()
+        colunas_analisaveis = [col for col in df.columns if col != 'Fraud_Label']
+        colunas_data = df.select_dtypes(include=['datetime', 'datetimetz', 'datetime64[ns]']).columns.tolist()
+        
+        coluna_selecionada = st.selectbox(
+            "Selecione uma variável para uma análise detalhada:",
+            options = colunas_analisaveis,
+            index=None,
+            placeholder="Escolha uma varíavel..."
+        )
+        
+        if coluna_selecionada:
+            if coluna_selecionada in colunas_numericas:
+                st.markdown(f"**Analisando a variável numérica:** `{coluna_selecionada}`")
+                
+                col_grafico, col_stats = st.columns([2, 1])
+                
+                with col_grafico:
+                    fig = px.histogram(df, x=coluna_selecionada, marginal="box", title=f"Distruibuição de '{coluna_selecionada}'")
+                    st.plotly_chart(fig, use_container_width=True)
+                with col_stats:
+                    media = df[coluna_selecionada].mean()
+                    mediana = df[coluna_selecionada].median()
+                    desvio_pad = df[coluna_selecionada].std()
+                    
+                    q1 = df[coluna_selecionada].quantile(0.25)
+                    q3 = df[coluna_selecionada].quantile(0.75)
+                    iqr = q3 - q1
+                    limite_inferior = q1 - 1.5 * iqr
+                    limite_superior = q3 + 1.5 * iqr
+                    outliers = df[(df[coluna_selecionada] < limite_inferior) | (df[coluna_selecionada] > limite_superior)]                    
+                    
+                    st.markdown(f"<div class='kpi-card color-1'><h3>Média</h3><h2>{media:,.2f}</h2></div>", unsafe_allow_html=True)
+                    st.markdown("<div style='height: 15px;'></div>", unsafe_allow_html=True)
+                    st.markdown(f"<div class='kpi-card color-2'><h3>Mediana</h3><h2>{mediana:,.2f}</h2></div>", unsafe_allow_html=True)
+                    st.markdown("<div style='height: 15px;'></div>", unsafe_allow_html=True)
+                    st.markdown(f"<div class='kpi-card color-3'><h3>Desvio Padrão</h3><h2>{desvio_pad:,.2f}</h2></div>", unsafe_allow_html=True)
+                    st.markdown("<div style='height: 15px;'></div>", unsafe_allow_html=True)
+                    st.markdown(f"<div class='kpi-card color-4'><h3>Nº de Outliers</h3><h2>{len(outliers):,}</h2></div>", unsafe_allow_html=True)
+            
+            elif coluna_selecionada in colunas_categoricas:
+                st.markdown(f"**Analisando a variável categórica:** `{coluna_selecionada}`")
+                
+                col_grafico_cat, col_stats_cat = st.columns([2, 1])
+
+                with col_grafico_cat:
+                    contagem = df[coluna_selecionada].value_counts().nlargest(15).reset_index()
+                    contagem.columns = [coluna_selecionada, 'Contagem']
+                    fig = px.bar(contagem, x=coluna_selecionada, y='Contagem', title=f"Contagem das 15 categorias mais comuns em '{coluna_selecionada}'")
+                    st.plotly_chart(fig, use_container_width=True)
+                
+                with col_stats_cat:
+                    num_categorias = df[coluna_selecionada].nunique()
+                    moda = df[coluna_selecionada].mode()[0]
+                    
+                    st.markdown(f"<div class='kpi-card color-1'><h3>Nº de Categorias Únicas</h3><h2>{num_categorias:,}</h2></div>", unsafe_allow_html=True)
+                    st.markdown("<div style='height: 15px;'></div>", unsafe_allow_html=True)
+                    st.markdown(f"<div class='kpi-card color-2'><h3>Categoria Mais Comum (Moda)</h3><h2>{moda}</h2></div>", unsafe_allow_html=True)
+            
+            elif coluna_selecionada in colunas_data:
+                st.markdown(f"**Analisando a variável de data/hora:** `{coluna_selecionada}`")
+        
+            # A melhor forma de visualizar é agregar as transações ao longo do tempo.
+                st.info("Para variáveis de tempo, visualizamos a contagem de transações por dia.")
+        
+            # Agrupa as transações por dia
+                transacoes_por_dia = df.set_index(coluna_selecionada).resample('D').size().reset_index(name='Contagem')
+        
+        
+                fig = px.line(transacoes_por_dia, x=coluna_selecionada, y='Contagem',
+                      title=f'Volume de Transações por Dia',
+                      labels={'Contagem': 'Número de Transações', coluna_selecionada: 'Data'})
+                st.plotly_chart(fig, use_container_width=True)
+        st.subheader("Nível 3: Investigação das Relações")
+        st.markdown("Aqui, cruzamos as variáveis para encontrar padrões e relações, focando em como elas se conectam com a ocorrência de fraude.")
+        
+        st.markdown("#### Relação de Cada Variável com a Fraude")
+        st.info("Selecione uma variável para ver como sua distribuição difere entre transações normais e fraudulentas.")
+        
+        opcoes_bivariada = [col for col in df.columns if col != 'Fraud_Label']
+        feature_to_compare = st.selectbox("Selecione uma variável para comparar:", opcoes_bivariada, key='bivariada_select')
+
+        if feature_to_compare:
+            # Lógica para Gráficos Comparativos
+            if feature_to_compare in colunas_numericas:
+                fig = px.box(df, x='Fraud_Label', y=feature_to_compare, 
+                             title=f"Distribuição de '{feature_to_compare}' por Classe de Fraude",
+                             labels={'Fraud_Label': 'É Fraude?'}, color='Fraud_Label',
+                             color_discrete_map={0: '#636EFA', 1: '#EF553B'})
+                st.plotly_chart(fig, use_container_width=True)
+            elif feature_to_compare in colunas_categoricas:
+                # Usando abas para mostrar contagem absoluta e relativa
+                tab1, tab2 = st.tabs(["Contagem Absoluta", "Proporção Relativa (%)"])
+                with tab1:
+                    fig_abs = px.histogram(df, x=feature_to_compare, color='Fraud_Label', 
+                                           barmode='group', title=f"Contagem de '{feature_to_compare}' por Classe de Fraude")
+                    st.plotly_chart(fig_abs, use_container_width=True)
+                with tab2:
+                    fig_rel = px.histogram(df, x=feature_to_compare, color='Fraud_Label', 
+                                           barmode='relative', title=f"Proporção de Fraude em '{feature_to_compare}'",
+                                           histnorm='percent')
+                    st.plotly_chart(fig_rel, use_container_width=True)
+            # --- 3.2 Mapa de Calor de Correlação ---
+        st.markdown("#### Mapa de Calor de Correlação")
+        st.info("Mostra como as variáveis numéricas se relacionam entre si. Valores próximos de 1 (vermelho) ou -1 (azul) indicam forte correlação.")
+        
+        corr_matrix = df.corr(numeric_only=True)
+        fig_corr = px.imshow(corr_matrix, text_auto=".2f", aspect="auto", 
+                             title="Mapa de Calor de Correlação", color_continuous_scale='RdBu_r')
+        st.plotly_chart(fig_corr, use_container_width=True)
+
+        st.markdown("---")
+        st.markdown("---")
+        
+        # --- 3.3 Análise de Cluster (Técnica Avançada) ---
+        st.markdown("#### Análise de Cluster (Técnica Avançada)")
+        st.info("Usamos Machine Learning para encontrar grupos (clusters) de transações com comportamentos similares, sem saber se são fraude ou não. Depois, analisamos a taxa de fraude em cada grupo descoberto.")
+
+        # Função para rodar o clustering (com cache para não re-executar a cada interação)
+        @st.cache_data
+        def rodar_clustering(dataframe, features, n_clusters=4):
+            data_cluster = dataframe[features].copy()
+            
+            # Padroniza os dados (importante para o K-Means)
+            scaler = StandardScaler()
+            data_scaled = scaler.fit_transform(data_cluster)
+            
+            # Roda o algoritmo K-Means
+            kmeans = KMeans(n_clusters=n_clusters, random_state=42, n_init=10)
+            kmeans.fit(data_scaled)
+            
+            return kmeans.labels_
+
+        # Selecionando as features para o cluster
+        features_cluster = ['Daily_Transaction_Count', 'Avg_Transaction_Amount_7d', 'Transaction_Distance']
+        
+        # Adiciona a coluna de cluster ao DataFrame
+        df['Cluster'] = rodar_clustering(df, features_cluster)
+        
+        # Análise dos resultados do cluster
+        col_cluster1, col_cluster2 = st.columns([1, 2])
+        with col_cluster1:
+            st.markdown("##### Taxa de Fraude por Cluster")
+            taxa_fraude_cluster = df.groupby('Cluster')['Fraud_Label'].mean().reset_index()
+            taxa_fraude_cluster['Fraud_Label'] = taxa_fraude_cluster['Fraud_Label'] * 100 # Converte para %
+            
+            fig_cluster_bar = px.bar(taxa_fraude_cluster, x='Cluster', y='Fraud_Label',
+                                     title='Taxa de Fraude (%) em Cada Cluster',
+                                     labels={'Fraud_Label': 'Taxa de Fraude (%)'})
+            st.plotly_chart(fig_cluster_bar, use_container_width=True)
+
+        with col_cluster2:
+            st.markdown("##### Visualização 3D dos Clusters")
+            fig_cluster_3d = px.scatter_3d(df, 
+                                           x='Transaction_Amount', 
+                                           y='Transaction_Distance', 
+                                           z='Account_Balance',
+                                           color='Cluster',
+                                           title='Clusters de Comportamento de Transação',
+                                           hover_data=['Fraud_Label'])
+            st.plotly_chart(fig_cluster_3d, use_container_width=True)
+            
 elif pagina_atual == "Análise Direcionada":
     st.header("🎯 Análise Direcionada de Fraude")
     st.markdown("Investigação focada em responder perguntas de negócio específicas sobre os padrões de fraude.")
