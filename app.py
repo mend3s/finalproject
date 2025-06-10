@@ -1,9 +1,14 @@
+# app.py
+import numpy as np
+# Importa o nosso arquivo 'api_dados.py' e o apelida de 'api'
+import func.functions as api
+# --- Configuração da Página ---
 import pandas as pd
 import streamlit as st
 import streamlit_pills as stp
 import seaborn as sns
 import matplotlib.pyplot as plt
-# from func import functions  # Removido se 'functions' não estiver sendo usado ainda
+#from func import functions  # Removido se 'functions' não estiver sendo usado ainda
 import sqlite3
 import plotly.express as px
 import plotly.graph_objects as go
@@ -77,12 +82,46 @@ st.session_state.pagina_selecionada = pagina_atual
 # CORREÇÃO 2: A estrutura if/elif agora corresponde exatamente às opções do menu.
 if pagina_atual == "Visão Geral":
     st.header("💡 Visão Geral do Negócio")
-    st.markdown("KPIs e métricas principais que resumem o cenário de transações e fraudes.")
-    # (Você pode adicionar seus cards de KPI aqui)
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Total de Transações", "50,000")
-    col2.metric("Total de Fraudes", "16,067")
-    col3.metric("Taxa de Fraude", "32.13%")
+    df_principal = api.carregar_dados()
+     # 1. Análise e KPIs de Outliers
+    df_outliers_valor, cont_outliers_valor, _ = api.identificar_outliers(df_principal, 'Transaction_Amount')
+    df_outliers_dist, cont_outliers_dist, _ = api.identificar_outliers(df_principal, 'Transaction_Distance')
+
+    st.subheader("Métricas de Anomalias")
+    col1, col2, col3, col4 = st.columns(4)
+
+    with col1:
+        total_valor_anomalo = df_outliers_valor['Transaction_Amount'].sum() if not df_outliers_valor.empty else 0
+        st.markdown(f"<div class='kpi-card color-4'><h3>Valor Anômalo Total</h3><h2>R$ {total_valor_anomalo:,.2f}</h2></div>", unsafe_allow_html=True)
+
+    with col2:
+        st.markdown(f"<div class='kpi-card color-4'><h3>Nº de Trans. Anômalas</h3><h2>{cont_outliers_valor}</h2></div>", unsafe_allow_html=True)
+
+    with col3:
+        maior_distancia = df_outliers_dist['Transaction_Distance'].max() if not df_outliers_dist.empty else 0
+        st.markdown(f"<div class='kpi-card color-1'><h3>Maior Distância</h3><h2>{maior_distancia:,.1f} km</h2></div>", unsafe_allow_html=True)
+
+    with col4:
+        st.markdown(f"<div class='kpi-card color-1'><h3>Nº de Trans. Distantes</h3><h2>{cont_outliers_dist}</h2></div>", unsafe_allow_html=True)
+
+    st.divider()
+
+    # 2. Visualização Interativa de Outliers
+    st.subheader("Visualização de Distribuição e Outliers")
+    colunas_para_boxplot = ['Transaction_Amount', 'Transaction_Distance', 'Account_Balance', 'Daily_Transaction_Count']
+    coluna_selecionada = st.selectbox("Selecione uma métrica para analisar:", colunas_para_boxplot)
+    
+    fig_boxplot = api.criar_boxplot_interativo(df_principal, coluna_selecionada)
+    st.plotly_chart(fig_boxplot, use_container_width=True)
+
+    st.divider()
+
+    # 3. Tabela de Outliers para Ação
+    st.subheader("Transações com Valor Anômalo para Investigação")
+    st.info("A tabela abaixo lista as transações cujo valor foi identificado como um outlier estatístico.")
+    
+    colunas_para_exibir = ['Transaction_ID', 'User_ID', 'Transaction_Amount', 'Transaction_Distance', 'Risk_Score', 'Timestamp']
+    st.dataframe(df_outliers_valor[colunas_para_exibir].sort_values('Transaction_Amount', ascending=False), use_container_width=True, hide_index=True)
 
 elif pagina_atual == "Analise Exploratoria":
     # MELHORIA 2: Conteúdo da página agora está corretamente nomeado e estruturado.

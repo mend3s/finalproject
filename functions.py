@@ -1,72 +1,69 @@
-import pandas as pd
-import sqlite3
+# func/api_dados.py
 
+import pandas as pd
+import numpy as np
+import streamlit as st
+from sqlalchemy import create_engine
+import plotly.express as px
+
+@st.cache_data
 def carregar_dados():
     """
-    Conecta ao banco de dados SQLite e carrega a tabela de transações.
-    Esta função é o único ponto de contato com o banco de dados.
+    Conecta ao banco 'creditdata.db' e carrega a tabela principal.
+    Retorna um DataFrame.
     """
+    NOME_DA_TABELA = 'TransacoesCompletas' # VERIFIQUE SE ESTE É O NOME CORRETO!
+    
     try:
-        # Conecta ao banco de dados criado pelo script de preparação.
-        conn = sqlite3.connect('analise_simples.db')
-        # Carrega a tabela única que contém todos os dados.
-        df = pd.read_sql_query("SELECT * FROM TransacoesCompletas", conn)
-        conn.close()
-        # Converte a coluna de data para o formato datetime, essencial para filtros.
-        # Certifique-se de que o nome da coluna 'Timestamp' corresponde ao seu arquivo.
-        df['Timestamp'] = pd.to_datetime(df['Timestamp'])
+        engine = create_engine('sqlite:///creditdata.db')
+        df = pd.read_sql(f"SELECT * FROM {NOME_DA_TABELA}", engine, parse_dates=['Timestamp'])
         return df
     except Exception as e:
-        # Retorna um DataFrame vazio se o banco ou a tabela não forem encontrados.
-        print(f"Erro ao carregar dados: {e}")
+        if f"no such table: {NOME_DA_TABELA}" in str(e):
+             st.error(f"ERRO: A tabela '{NOME_DA_TABELA}' não foi encontrada. Verifique o nome na linha 15 do arquivo 'func/api_dados.py'.")
+        else:
+            st.error(f"Falha ao carregar dados: {e}")
         return pd.DataFrame()
 
-def calcular_kpis_seguranca(df):
+# ---- FUNÇÕES PARA A PÁGINA 'VISÃO GERAL' ----
+
+def identificar_outliers(df, coluna):
     """
-    Calcula os principais indicadores de segurança (KPIs) a partir de um DataFrame.
-    Recebe um DataFrame (geralmente já filtrado) e retorna um dicionário com os KPIs.
+    Identifica outliers em uma coluna usando o método IQR.
+    Retorna um dataframe com os outliers, a contagem e o limite superior.
     """
-    if df.empty:
-        # Retorna valores padrão se o DataFrame estiver vazio para evitar erros.
-        return {
-            'total_transacoes': 0, 'total_fraudes': 0, 'taxa_fraude': 0,
-            'valor_perdido': 0, 'alertas_ip': 0
-        }
+    if coluna not in df.columns:
+        return pd.DataFrame(), 0, 0
 
-    total_transacoes = len(df)
-    total_fraudes = int(df['Fraud_Label'].sum())
-    taxa_fraude = (total_fraudes / total_transacoes * 100) if total_transacoes > 0 else 0
-    valor_perdido = df[df['Fraud_Label'] == 1]['Transaction_Amount'].sum()
-    alertas_ip = int(df['IP_Address_Flag'].sum())
+    Q1 = df[coluna].quantile(0.25)
+    Q3 = df[coluna].quantile(0.75)
+    IQR = Q3 - Q1
+    
+    limite_inferior = Q1 - 1.5 * IQR
+    limite_superior = Q3 + 1.5 * IQR
+    
+    df_outliers = df[(df[coluna] < limite_inferior) | (df[coluna] > limite_superior)]
+    
+    return df_outliers, len(df_outliers), limite_superior
 
-    return {
-        'total_transacoes': total_transacoes,
-        'total_fraudes': total_fraudes,
-        'taxa_fraude': taxa_fraude,
-        'valor_perdido': valor_perdido,
-        'alertas_ip': alertas_ip
-    }
+def criar_boxplot_interativo(df, coluna):
+    """Cria um gráfico de boxplot interativo com Plotly."""
+    fig = px.box(df, y=coluna, title=f'Análise de Outliers para {coluna}', points="all", height=500)
+    fig.update_layout(title_x=0.5, template="plotly_white")
+    return fig
 
-def preparar_dados_graficos(df):
-    """
-    Prepara e agrega os dados para os gráficos do dashboard.
-    """
-    if df.empty:
-        # Retorna DataFrames vazios se não houver dados.
-        return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
 
-    # Dados para o Gráfico de Barras: Fraudes por Tipo de Transação
-    fraudes_por_tipo = df[df['Fraud_Label'] == 1]['Transaction_Type'].value_counts().reset_index()
-    fraudes_por_tipo.columns = ['Tipo de Transação', 'Quantidade de Fraudes']
+# ---- FUNÇÕES PARA A PÁGINA 'ANÁLISE EXPLORATÓRIA' ----
 
-    # Dados para o Gráfico de Barras Horizontais: Top 10 Categorias de Mercante com Fraude
-    fraudes_por_mercante = df[df['Fraud_Label'] == 1]['Merchant_Category'].value_counts().nlargest(10).reset_index()
-    fraudes_por_mercante.columns = ['Categoria de Mercante', 'Quantidade de Fraudes']
+def criar_grafico_distribuicao(df, coluna):
+    """Cria um histograma interativo para uma coluna numérica."""
+    fig = px.histogram(df, x=coluna, title=f'Distribuição de {coluna}', nbins=50, template='plotly_white')
+    fig.update_layout(bargap=0.1, title_x=0.5)
+    return fig
 
-    # Dados para o Gráfico de Linha: Transações e Fraudes ao Longo do Tempo
-    df_temporal = df.set_index('Timestamp').resample('D').agg(
-        total_transacoes=('Transaction_ID', 'count'),
-        total_fraudes=('Fraud_Label', 'sum')
-    ).reset_index()
-
-    return fraudes_por_tipo, fraudes_por_mercante, df_temporal
+def criar_grafico_contagem(df, coluna):
+    """Cria um gráfico de barras interativo para uma coluna categórica."""
+    contagem = df[coluna].value_counts().reset_index()
+    fig = px.bar(contagem, x=contagem.columns[0], y=contagem.columns[1], title=f'Contagem por {coluna}', template='plotly_white', text_auto=True)
+    fig.update_layout(title_x=0.5)
+    return fig
