@@ -18,6 +18,69 @@ st.set_page_config(
     layout="wide"
 )
 
+# CSS customizado apenas para a aba home
+home_css = """
+<style>
+    /* Metrics styling */
+    [data-testid="metric-container"] {
+        background-color: #f8fafc;
+        border: 1px solid #e2e8f0;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+    }
+    
+    /* Big numbers styling */
+    .metric-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 1.5rem;
+        border-radius: 1rem;
+        color: white;
+        text-align: center;
+        margin: 0.5rem 0;
+    }
+    
+    .metric-card h3 {
+        margin: 0;
+        font-size: 2.5rem;
+        font-weight: bold;
+        color: white;
+    }
+    
+    .metric-card p {
+        margin: 0.5rem 0 0 0;
+        font-size: 1rem;
+        opacity: 0.9;
+        color: white;
+    }
+    
+    /* Section headers */
+    .section-header {
+        background: linear-gradient(90deg, #1e40af 0%, #3b82f6 100%);
+        color: white;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        margin: 2rem 0 1rem 0;
+        text-align: center;
+    }
+    
+    /* Chart containers */
+    .chart-container {
+        background-color: white;
+        padding: 1.5rem;
+        border-radius: 0.75rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        margin: 1rem 0;
+    }
+    
+    .chart-container h4 {
+        color: #1e40af;
+        text-align: center;
+        margin-bottom: 1rem;
+    }
+</style>
+"""
+
 st.sidebar.title("📋Menu")
 st.sidebar.title("Categorias")
 st.markdown(
@@ -32,7 +95,7 @@ st.markdown(
 )   
      
 if 'aba_ativa' not in st.session_state:
-    st.session_state.aba_ativa = 'home'
+    st.session_state.aba_ativa = 'home'  # valor inicial padrão
     
 st.sidebar.button("📌 Análises Operacionais", on_click=lambda: st.session_state.update(aba_ativa='home'))
 st.sidebar.button("🔍 Filtros", on_click=lambda: st.session_state.update(aba_ativa='filtros'))
@@ -44,14 +107,18 @@ st.sidebar.button("📦 Produtos", on_click=lambda: st.session_state.update(aba_
 # Função para criar big numbers
 def create_big_number_card(title, value, subtitle=""):
     st.markdown(f"""
-    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 1.5rem; border-radius: 1rem; color: white; text-align: center; margin: 0.5rem 0;">
-        <h3 style="margin: 0; font-size: 2.5rem; font-weight: bold; color: white;">{value}</h3>
-        <p style="margin: 0.5rem 0 0 0; font-size: 1rem; opacity: 0.9; color: white;">{title}</p>
+    <div class="metric-card">
+        <h3>{value}</h3>
+        <p>{title}</p>
         {f'<small style="opacity: 0.8; color: white;">{subtitle}</small>' if subtitle else ''}
     </div>
     """, unsafe_allow_html=True)
 
 if st.session_state.aba_ativa == 'home':
+    # Aplicar CSS customizado apenas na home
+    st.markdown(home_css, unsafe_allow_html=True)
+    
+    # Estilo personalizado da página 'home'
     st.markdown(
         """
         <style>
@@ -65,15 +132,16 @@ if st.session_state.aba_ativa == 'home':
 
     # Header principal
     st.markdown("""
-    <div style="background: linear-gradient(90deg, #1e40af 0%, #3b82f6 100%); color: white; padding: 1rem; border-radius: 0.5rem; margin: 2rem 0 1rem 0; text-align: center;">
-        <h1 style="margin: 0; font-size: 2.5rem;">✈️ Dashboard de Análise de Voos</h1>
-        <p style="margin: 0.5rem 0 0 0; opacity: 0.9;">Visão geral dos dados operacionais</p>
+    <div class="section-header">
+        <h1 style='margin: 0; font-size: 2.5rem;'>✈️ Dashboard de Análise de Voos</h1>
+        <p style='margin: 0.5rem 0 0 0; opacity: 0.9;'>Visão geral dos dados operacionais</p>
     </div>
     """, unsafe_allow_html=True)
     
     # Big Numbers - KPIs principais
     st.markdown("### 📊 Indicadores Principais")
     
+    # Buscar dados para os KPIs
     query_kpis = """
     SELECT 
         COUNT(*) as total_voos,
@@ -91,6 +159,7 @@ if st.session_state.aba_ativa == 'home':
     
     kpis = pd.read_sql_query(query_kpis, conn).iloc[0]
     
+    # Layout dos big numbers
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
@@ -122,7 +191,7 @@ if st.session_state.aba_ativa == 'home':
             f"{int(kpis['total_aeroportos_origem'])} aeroportos"
         )
 
-    # Comparação Nacionais x Internacionais
+    # --- Comparação Nacionais x Internacionais ---
     st.markdown("---")
     st.markdown("### 🌍 Comparação de Voos Nacionais vs Internacionais")
 
@@ -164,7 +233,7 @@ if st.session_state.aba_ativa == 'home':
     with col1:
         st.markdown("""
         <div style='background-color: white; padding: 2rem; border-radius: 0.75rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); margin: 1rem 0;'>
-            <h3 style='color: #1e40af; text-align: center; margin-bottom: 1.5rem; font-size: 1.8rem;'>🇧🇷 Voos Nacionais</h3>
+            <h3 style='color: #1e40af; text-align: center; margin-bottom: 1.5rem; font-size: 1.5rem;'>🇧🇷 Voos Nacionais</h3>
         """, unsafe_allow_html=True)
         if not df_nacional.empty:
             st.metric("Total Voos", f"{int(df_nacional['total_voos'].iloc[0]):,}")
@@ -175,7 +244,7 @@ if st.session_state.aba_ativa == 'home':
     with col2:
         st.markdown("""
         <div style='background-color: white; padding: 2rem; border-radius: 0.75rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); margin: 1rem 0;'>
-            <h3 style='color: #1e40af; text-align: center; margin-bottom: 1.5rem; font-size: 1.8rem;'>🌐 Voos Internacionais</h3>
+            <h3 style='color: #1e40af; text-align: center; margin-bottom: 1.5rem; font-size: 1.5rem;'>🌐 Voos Internacionais</h3>
         """, unsafe_allow_html=True)
         if not df_internacional.empty:
             st.metric("Total Voos", f"{int(df_internacional['total_voos'].iloc[0]):,}")
@@ -196,6 +265,7 @@ if st.session_state.aba_ativa == 'home':
     st.markdown("---")
     st.markdown("### 📈 Análises Visuais")
     
+    # Top empresas por voos
     query_top_empresas = """
     SELECT 
         e.empresa_sigla,
@@ -217,7 +287,7 @@ if st.session_state.aba_ativa == 'home':
     with col1:
         st.markdown("""
         <div style='background-color: white; padding: 1.5rem; border-radius: 0.75rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); margin: 1rem 0;'>
-            <h4 style='color: #1e40af; text-align: center; margin-bottom: 1rem; font-size: 1.3rem;'>🏢 Top 10 Empresas por Voos</h4>
+            <h4 style='color: #1e40af; text-align: center; margin-bottom: 1rem; font-size: 1.2rem;'>🏢 Top 10 Empresas por Voos</h4>
         """, unsafe_allow_html=True)
         
         fig_empresas = px.bar(
@@ -227,7 +297,7 @@ if st.session_state.aba_ativa == 'home':
             orientation='h',
             color='total_voos',
             color_continuous_scale='Blues',
-            height=250
+            height=300
         )
         fig_empresas.update_layout(
             showlegend=False,
@@ -241,7 +311,7 @@ if st.session_state.aba_ativa == 'home':
     with col2:
         st.markdown("""
         <div style='background-color: white; padding: 1.5rem; border-radius: 0.75rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); margin: 1rem 0;'>
-            <h4 style='color: #1e40af; text-align: center; margin-bottom: 1rem; font-size: 1.3rem;'>👥 Passageiros por Empresa</h4>
+            <h4 style='color: #1e40af; text-align: center; margin-bottom: 1rem; font-size: 1.2rem;'>👥 Passageiros por Empresa</h4>
         """, unsafe_allow_html=True)
         
         fig_passageiros = px.bar(
@@ -251,7 +321,7 @@ if st.session_state.aba_ativa == 'home':
             orientation='h',
             color='total_passageiros',
             color_continuous_scale='Greens',
-            height=250
+            height=300
         )
         fig_passageiros.update_layout(
             showlegend=False,
@@ -262,7 +332,7 @@ if st.session_state.aba_ativa == 'home':
         st.plotly_chart(fig_passageiros, use_container_width=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
-    # Análise por empresa - removendo filtro de ano
+    # --- Filtros e análise por empresa (seção original mantida) ---
     st.markdown("---")
     st.markdown("### 🏢 Análise por Empresa Aérea")
     col_filtro1, col_filtro2 = st.columns(2)
@@ -273,6 +343,7 @@ if st.session_state.aba_ativa == 'home':
         nacionalidades = pd.read_sql_query("SELECT DISTINCT empresa_nacionalidade FROM empresa ORDER BY empresa_nacionalidade", conn)['empresa_nacionalidade'].tolist()
         nacionalidade_selecionada = st.selectbox("Nacionalidade:", ['Todas'] + nacionalidades, key="nacionalidade_empresa")
 
+    # Query dinâmica
     where_conditions = []
     if mes_selecionado != 'Todos':
         where_conditions.append(f"v.mes = {mes_selecionado}")
@@ -324,9 +395,10 @@ if st.session_state.aba_ativa == 'home':
     else:
         st.warning("⚠️ Nenhum dado encontrado para os filtros selecionados.")
 
-    # Total de Decolagens por Mês - removendo filtro de ano
+    # --- Nova seção: Total de Decolagens por Mês ---
     st.markdown("### 🛫 Total de Decolagens por Mês")
     
+    # Filtros para decolagens
     col_filtro1, col_filtro2 = st.columns(2)
     
     with col_filtro1:
@@ -334,9 +406,10 @@ if st.session_state.aba_ativa == 'home':
         empresa_selecionada = st.selectbox("Empresa:", ['Todas'] + empresas_disponiveis, key="empresa_decolagem")
     
     with col_filtro2:
-        tipos_voo = ['Todos', 'DOMÉSTICA', 'INTERNACIONAL']
+        tipos_voo = ['Todos', 'DOMESTICA', 'INTERNACIONAL']
         tipo_voo_selecionado = st.selectbox("Tipo de Voo:", tipos_voo, key="tipo_voo_decolagem")
     
+    # Construir query para decolagens
     where_conditions_dec = []
     if empresa_selecionada != 'Todas':
         where_conditions_dec.append(f"v.empresa_sigla = '{empresa_selecionada}'")
@@ -361,11 +434,16 @@ if st.session_state.aba_ativa == 'home':
     df_decolagens = pd.read_sql_query(query_decolagens, conn)
     
     if not df_decolagens.empty:
+        # Gráfico de linha temporal para decolagens
         col1, col2 = st.columns([3, 1])
         
         with col1:
             fig_decolagens = plt.figure(figsize=(14, 6))
+            
+            # Criar labels para o eixo X (sem usar pd.to_datetime)
             df_decolagens['mes_ano_label'] = df_decolagens['mes'].astype(str).str.zfill(2) + '/' + df_decolagens['ano'].astype(str)
+            
+            # Usar range numérico para o eixo X
             x_values = range(len(df_decolagens))
             
             plt.plot(x_values, df_decolagens['total_decolagens'], 
@@ -374,8 +452,11 @@ if st.session_state.aba_ativa == 'home':
             plt.xlabel('Mês/Ano')
             plt.ylabel('Total de Decolagens')
             plt.grid(True, alpha=0.3)
+            
+            # Configurar labels do eixo X
             plt.xticks(x_values, df_decolagens['mes_ano_label'], rotation=45)
             
+            # Adicionar valores nos pontos
             for i, (idx, row) in enumerate(df_decolagens.iterrows()):
                 plt.annotate(f"{int(row['total_decolagens']):,}", 
                            (i, row['total_decolagens']),
@@ -395,6 +476,7 @@ if st.session_state.aba_ativa == 'home':
             st.write(f"**Pico:** {int(mes_maior['mes'])}/{int(mes_maior['ano'])}")
             st.write(f"**Valor:** {int(mes_maior['total_decolagens']):,}")
         
+        # Tabela de decolagens
         st.markdown("#### 📋 Tabela de Decolagens por Mês")
         df_decolagens_display = df_decolagens[['ano', 'mes', 'total_decolagens', 'total_voos', 'media_decolagens_por_voo']].copy()
         df_decolagens_display.columns = ['Ano', 'Mês', 'Total Decolagens', 'Total Voos', 'Média Decolagens/Voo']
@@ -406,9 +488,10 @@ if st.session_state.aba_ativa == 'home':
     else:
         st.warning("⚠️ Nenhum dado de decolagens encontrado para os filtros selecionados.")
 
-    # Distância Total por Rota/Empresa - removendo filtro aeroporto origem
+    # --- Nova seção: Distância Total por Rota/Empresa ---
     st.markdown("### 🗺️ Distância Total Voada por Rota e Empresa")
     
+    # Filtros para distância
     col_filtro1, col_filtro2 = st.columns(2)
     
     with col_filtro1:
@@ -416,12 +499,14 @@ if st.session_state.aba_ativa == 'home':
         empresa_selecionada_dist = st.selectbox("Empresa:", ['Todas'] + empresas_dist, key="empresa_distancia")
     
     with col_filtro2:
-        tipos_voo_dist = ['Todos', 'DOMÉSTICA', 'INTERNACIONAL']
+        tipos_voo_dist = ['Todos', 'DOMESTICA', 'INTERNACIONAL']
         tipo_voo_selecionado_dist = st.selectbox("Tipo de Voo:", tipos_voo_dist, key="tipo_voo_distancia")
     
+    # Tabs para diferentes análises
     tab1, tab2 = st.tabs(["📊 Por Empresa", "🛣️ Por Rota"])
     
     with tab1:
+        # Análise por empresa
         where_conditions_dist = []
         if empresa_selecionada_dist != 'Todas':
             where_conditions_dist.append(f"v.empresa_sigla = '{empresa_selecionada_dist}'")
@@ -456,21 +541,22 @@ if st.session_state.aba_ativa == 'home':
             for i, (_, row) in enumerate(top_5_empresas.iterrows()):
                 with cols[i]:
                     st.markdown(f"""
-                    <div style='background-color: #f8fafc; padding: 1rem; border-radius: 0.5rem; text-align: center; margin: 0.5rem 0; border: 1px solid #e2e8f0;'>
+                    <div style='background-color: #f8fafc; padding: 1rem; border-radius: 0.5rem; text-align: center; margin: 0.5rem 0;'>
                         <h4 style='color: #1e40af; margin: 0; font-size: 1rem;'>{i+1}º</h4>
-                        <p style='margin: 0.25rem 0; font-weight: bold; font-size: 0.9rem; color: #1f2937;'>{row['empresa_sigla']}</p>
+                        <p style='margin: 0.25rem 0; font-weight: bold; font-size: 0.9rem;'>{row['empresa_sigla']}</p>
                         <p style='margin: 0; font-size: 0.8rem; color: #64748b;'>{row['natureza']}</p>
                         <p style='margin: 0.25rem 0; font-weight: bold; color: #1e40af; font-size: 0.9rem;'>{row['distancia_total']:,.0f} km</p>
                         <p style='margin: 0; font-size: 0.8rem; color: #64748b;'>{int(row['total_voos']):,} voos</p>
                     </div>
                     """, unsafe_allow_html=True)
             
+            # Gráfico de barras para distância por empresa
             top_15_empresas = df_distancia_empresa.head(15)
             
             fig_dist_empresa = plt.figure(figsize=(12, 6))
             bars = plt.barh(range(len(top_15_empresas)), 
                            top_15_empresas['distancia_total'], 
-                           color=['#FF6B6B' if nat == 'DOMÉSTICA' else '#4ECDC4' for nat in top_15_empresas['natureza']])
+                           color=['#FF6B6B' if nat == 'DOMESTICA' else '#4ECDC4' for nat in top_15_empresas['natureza']])
             
             plt.yticks(range(len(top_15_empresas)), 
                       [f"{row['empresa_sigla']}\n({row['natureza']})" for _, row in top_15_empresas.iterrows()])
@@ -478,12 +564,14 @@ if st.session_state.aba_ativa == 'home':
             plt.title('Top 15 Empresas por Distância Total Voada')
             plt.gca().invert_yaxis()
             
+            # Adicionar valores nas barras
             for i, bar in enumerate(bars):
                 width = bar.get_width()
                 plt.text(width + 0.01 * max(top_15_empresas['distancia_total']), 
                         bar.get_y() + bar.get_height()/2, 
                         f'{width:,.0f}', ha='left', va='center', fontsize=8)
             
+            # Legenda
             legend_elements = [Patch(facecolor='#FF6B6B', label='Doméstica'),
                              Patch(facecolor='#4ECDC4', label='Internacional')]
             plt.legend(handles=legend_elements, loc='lower right')
@@ -491,6 +579,7 @@ if st.session_state.aba_ativa == 'home':
             plt.tight_layout()
             st.pyplot(fig_dist_empresa)
             
+            # Tabela resumo empresas
             st.markdown("#### 📋 Resumo por Empresa")
             df_empresa_display = df_distancia_empresa.copy()
             df_empresa_display['distancia_total'] = df_empresa_display['distancia_total'].apply(lambda x: f"{x:,.0f}")
@@ -509,6 +598,7 @@ if st.session_state.aba_ativa == 'home':
             st.dataframe(df_empresa_display, use_container_width=True)
     
     with tab2:
+        # Análise por rota
         where_conditions_rota = []
         if empresa_selecionada_dist != 'Todas':
             where_conditions_rota.append(f"v.empresa_sigla = '{empresa_selecionada_dist}'")
@@ -539,6 +629,7 @@ if st.session_state.aba_ativa == 'home':
         df_distancia_rota = pd.read_sql_query(query_distancia_rota, conn)
         
         if not df_distancia_rota.empty:
+            # Criar coluna de rota
             df_distancia_rota['rota'] = df_distancia_rota['aeroporto_origem_sigla'] + ' → ' + df_distancia_rota['aeroporto_destino_sigla']
             
             # Top 5 rotas em formato horizontal
@@ -549,9 +640,9 @@ if st.session_state.aba_ativa == 'home':
             for i, (_, row) in enumerate(top_5_rotas.iterrows()):
                 with cols[i]:
                     st.markdown(f"""
-                    <div style='background-color: #f8fafc; padding: 1rem; border-radius: 0.5rem; text-align: center; margin: 0.5rem 0; border: 1px solid #e2e8f0;'>
+                    <div style='background-color: #f8fafc; padding: 1rem; border-radius: 0.5rem; text-align: center; margin: 0.5rem 0;'>
                         <h4 style='color: #1e40af; margin: 0; font-size: 1rem;'>{i+1}º</h4>
-                        <p style='margin: 0.25rem 0; font-weight: bold; font-size: 0.9rem; color: #1f2937;'>{row['rota']}</p>
+                        <p style='margin: 0.25rem 0; font-weight: bold; font-size: 0.9rem;'>{row['rota']}</p>
                         <p style='margin: 0; font-size: 0.8rem; color: #64748b;'>{row['natureza']}</p>
                         <p style='margin: 0.25rem 0; font-weight: bold; color: #1e40af; font-size: 0.9rem;'>{row['distancia_total']:,.0f} km</p>
                         <p style='margin: 0; font-size: 0.8rem; color: #64748b;'>{int(row['total_voos']):,} voos</p>
@@ -559,12 +650,13 @@ if st.session_state.aba_ativa == 'home':
                     </div>
                     """, unsafe_allow_html=True)
             
+            # Gráfico de barras para rotas
             top_20_rotas = df_distancia_rota.head(20)
             
             fig_dist_rota = plt.figure(figsize=(12, 8))
             bars = plt.barh(range(len(top_20_rotas)), 
                            top_20_rotas['distancia_total'],
-                           color=['#FF6B6B' if nat == 'DOMÉSTICA' else '#4ECDC4' for nat in top_20_rotas['natureza']])
+                           color=['#FF6B6B' if nat == 'DOMESTICA' else '#4ECDC4' for nat in top_20_rotas['natureza']])
             
             plt.yticks(range(len(top_20_rotas)), 
                       [f"{row['rota']}\n({row['natureza']})" for _, row in top_20_rotas.iterrows()])
@@ -572,12 +664,14 @@ if st.session_state.aba_ativa == 'home':
             plt.title('Top 20 Rotas por Distância Total Voada')
             plt.gca().invert_yaxis()
             
+            # Adicionar valores nas barras
             for i, bar in enumerate(bars):
                 width = bar.get_width()
                 plt.text(width + 0.01 * max(top_20_rotas['distancia_total']), 
                         bar.get_y() + bar.get_height()/2, 
                         f'{width:,.0f}', ha='left', va='center', fontsize=7)
             
+            # Legenda
             legend_elements = [Patch(facecolor='#FF6B6B', label='Doméstica'),
                              Patch(facecolor='#4ECDC4', label='Internacional')]
             plt.legend(handles=legend_elements, loc='lower right')
@@ -585,6 +679,7 @@ if st.session_state.aba_ativa == 'home':
             plt.tight_layout()
             st.pyplot(fig_dist_rota)
             
+            # Tabela resumo rotas
             st.markdown("#### 📋 Resumo por Rota")
             df_rota_display = df_distancia_rota.copy()
             df_rota_display['distancia_total'] = df_rota_display['distancia_total'].apply(lambda x: f"{x:,.0f}")
@@ -606,7 +701,9 @@ if st.session_state.aba_ativa == 'home':
         else:
             st.warning("⚠️ Nenhum dado de rota encontrado para os filtros selecionados.")
 
+# Manter as outras abas como estavam originalmente
 if st.session_state.aba_ativa == 'eficiencia_comb':
+
     st.markdown(
         """
         <style>
@@ -659,6 +756,5 @@ if st.session_state.aba_ativa == 'eficiencia_comb':
     st.subheader("Média Geral de Eficiência")
     st.metric(label="Média Geral (km/l)", value=f"{media_eficiencia:.2f}")
 
-
-
-            
+# Fechar conexão
+conn.close()
