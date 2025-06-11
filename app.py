@@ -2,14 +2,12 @@
 import numpy as np
 # Importa o nosso arquivo 'api_dados.py' e o apelida de 'api'
 import func.functions as api
-# --- Configuração da Página ---
 import pandas as pd
 import streamlit as st
 import streamlit_pills as stp
 import seaborn as sns
 import matplotlib.pyplot as plt
-from func import functions  # Removido se 'functions' não estiver sendo usado ainda
-import sqlite3
+from func import functions
 import plotly.express as px
 import plotly.graph_objects as go
 from sklearn.preprocessing import StandardScaler
@@ -60,8 +58,8 @@ st.title("🕵️ DASHBOARD DE ANÁLISE DE FRAUDES")
 
 # --- Lógica de Navegação ---
 # CORREÇÃO 1: Adicionado um ícone para a quarta opção do menu.
-opcoes_menu = ["Visão Geral", "Analise Exploratoria", "Análise Direcionada", "Modelagem Preditiva"]
-icones_menu = ["💡", "🔬", "🎯", "⚙️"] # 4 opções, 4 ícones
+opcoes_menu = ["Visão Geral", "Analise Exploratoria", "Análise Direcionada", "Resumo Estratégico"]
+icones_menu = ["💡", "🔬", "🎯", "🏆"] # 4 opções, 4 ícones
 
 # MELHORIA 1: Lógica de inicialização simplificada
 if 'pagina_selecionada' not in st.session_state:
@@ -80,9 +78,6 @@ pagina_atual = stp.pills(
 # Atualiza o estado da sessão com a seleção atual do usuário.
 st.session_state.pagina_selecionada = pagina_atual
 
-
-# --- Conteúdo das Páginas (Estrutura Corrigida e Completa) ---
-# CORREÇÃO 2: A estrutura if/elif agora corresponde exatamente às opções do menu.
 if pagina_atual == "Visão Geral":
     st.header("💡 Visão Geral do Negócio")
     df_principal = api.carregar_dados()
@@ -144,10 +139,6 @@ elif pagina_atual == "Analise Exploratoria":
             data_fim = df['Timestamp'].max().strftime('%d/%m/%Y')
             st.info(f"Estas são as métricas essenciais que resumem o nosso banco de dados \n\n📅 **Período em Análise:** de {data_inicio} a {data_fim}")
         
-        # --------------------------------------------------------------------------
-        # ADAPTAÇÃO PARA OS CARDS CUSTOMIZADOS
-        # --------------------------------------------------------------------------
-        
         col1, col2, col3, col4 = st.columns(4)
         
         # --- Cálculo das métricas ---
@@ -156,9 +147,6 @@ elif pagina_atual == "Analise Exploratoria":
         total_fraudes = df['Fraud_Label'].sum()
         taxa_fraude = (total_fraudes / total_transacoes) * 100 if total_transacoes > 0 else 0
         
-        # --- Renderização dos cards usando st.markdown e f-strings ---
-        
-        # Card 1: Total de Transações
         with col1:
             st.markdown(f"""
             <div class='kpi-card color-1'>
@@ -167,7 +155,6 @@ elif pagina_atual == "Analise Exploratoria":
             </div>
             """, unsafe_allow_html=True)
 
-        # Card 2: Total de Variáveis
         with col2:
             st.markdown(f"""
             <div class='kpi-card color-2'>
@@ -176,7 +163,6 @@ elif pagina_atual == "Analise Exploratoria":
             </div>
             """, unsafe_allow_html=True)
 
-        # Card 3: Total de Fraudes
         with col3:
             st.markdown(f"""
             <div class='kpi-card color-3'>
@@ -185,7 +171,6 @@ elif pagina_atual == "Analise Exploratoria":
             </div>
             """, unsafe_allow_html=True)
 
-        # Card 4: Taxa de Fraude
         with col4:
             st.markdown(f"""
             <div class='kpi-card color-4'>
@@ -196,7 +181,6 @@ elif pagina_atual == "Analise Exploratoria":
 
         st.markdown("---")
         
-        # --- Detalhes Técnicos em Expanders ---
         st.markdown("#### Detalhes Técnicos do Dataset")
         
         with st.expander("👁️ Visualizar Amostra dos Dados"):
@@ -280,12 +264,9 @@ elif pagina_atual == "Analise Exploratoria":
             elif coluna_selecionada in colunas_data:
                 st.markdown(f"**Analisando a variável de data/hora:** `{coluna_selecionada}`")
         
-            # A melhor forma de visualizar é agregar as transações ao longo do tempo.
                 st.info("Para variáveis de tempo, visualizamos a contagem de transações por dia.")
         
-            # Agrupa as transações por dia
                 transacoes_por_dia = df.set_index(coluna_selecionada).resample('D').size().reset_index(name='Contagem')
-        
         
                 fig = px.line(transacoes_por_dia, x=coluna_selecionada, y='Contagem',
                       title=f'Volume de Transações por Dia',
@@ -375,10 +356,180 @@ elif pagina_atual == "Analise Exploratoria":
 elif pagina_atual == "Análise Direcionada":
     st.header("🎯 Análise Direcionada de Fraude")
     st.markdown("Investigação focada em responder perguntas de negócio específicas sobre os padrões de fraude.")
-    st.info("Espaço reservado para os gráficos da Análise Direcionada: Análise por Canal, Contexto, Comportamento, etc.")
+    
+    st.markdown(
+            "Analisamos se transações fraudulentas de **alto valor** (`Transaction_Amount`) são mais comuns em "
+            "certos **tipos de transação** (`Transaction_Type`), como 'Online', 'POS' (Ponto de Venda) ou 'ATM Withdrawal' (Saque em Caixa Eletrônico)."
+        )
 
-elif pagina_atual == "Modelagem Preditiva":
-    # Adicionada a condição que faltava.
-    st.header("⚙️ Modelagem Preditiva")
-    st.markdown("Construção e avaliação de modelos de Machine Learning para prever transações fraudulentas.")
-    st.info("Espaço reservado para os resultados da Modelagem Preditiva: Matriz de Confusão, Curva ROC, etc.")
+    df = api.carregar_dados()
+        
+    tipos_disponiveis = df['Transaction_Type'].unique()
+    tipos_selecionados = st.multiselect(
+            'Selecione os tipos de transação para comparar:',
+            options=tipos_disponiveis,
+            default=list(tipos_disponiveis[:3]) # Padrão para os três primeiros tipos encontrados
+    )
+
+    if tipos_selecionados:
+        df_filtrado_tipo = df[df['Transaction_Type'].isin(tipos_selecionados)]
+            
+        fig_tipo = px.box(
+            df_filtrado_tipo,
+            x='Transaction_Type',
+            y='Transaction_Amount',
+            color='Fraud_Label',
+            title='Distribuição do Valor da Transação por Tipo e Fraude',
+            labels={
+                "Transaction_Amount": "Valor da Transação (R$)",
+                "Transaction_Type": "Tipo da Transação",
+                "Fraud_Label": "É Fraude? (0 = Não, 1 = Sim)"
+                },
+            color_discrete_map={0: '#636EFA', 1: '#EF553B'} # Cores Azul e Vermelho
+            )
+        fig_tipo.update_layout(yaxis_title="Valor da Transação (R$)")
+        st.plotly_chart(fig_tipo, use_container_width=True)
+        st.info("💡 **Insight:** Use este gráfico para ver se fraudes de alto valor se concentram em um tipo específico. Por exemplo, fraudes do tipo 'Online' podem ter valores sistematicamente maiores do que as de 'POS'.")
+
+        st.divider()
+
+        # --- Hipótese 2: Existe um "horário nobre" da fraude? ---
+        st.subheader("Hipótese 2: As fraudes ocorrem em horários específicos do dia?")
+        st.markdown(
+            "Verificamos se existe um padrão temporal, investigando se a **ocorrência de fraudes** se concentra "
+            "em determinados períodos do dia, como de madrugada, quando a vigilância do titular do cartão é menor."
+        )
+
+        df['Hora_do_Dia'] = df['Timestamp'].dt.hour
+        
+        fig_hora = px.histogram(
+            df,
+            x='Hora_do_Dia',
+            color='Fraud_Label',
+            barmode='group',
+            title='Contagem de Transações por Hora do Dia',
+            labels={
+                "Hora_do_Dia": "Hora do Dia (0-23h)",
+                "Fraud_Label": "É Fraude? (0 = Não, 1 = Sim)"
+            },
+            color_discrete_map={0: '#636EFA', 1: '#EF553B'}
+        )
+        fig_hora.update_layout(xaxis_title="Hora do Dia (0-23h)", yaxis_title="Número de Transações")
+        st.plotly_chart(fig_hora, use_container_width=True)
+        st.info("💡 **Insight:** Um pico de fraudes na madrugada (ex: entre 1h e 4h da manhã), quando as transações legítimas são baixas, é um forte sinal de atividade suspeita que o modelo pode aprender.")
+
+        st.divider()
+
+        # --- Hipótese 3: A combinação de risco e comportamento indica fraude? ---
+        st.subheader("Hipótese 3: Como o risco se relaciona com a frequência de transações?")
+        st.markdown(
+            "Analisamos a relação entre a **pontuação de risco** (`Risk_Score`) da transação e o **número de transações diárias** "
+            "(`Daily_Transaction_Count`) do usuário, para identificar se fraudes ocorrem em um quadrante específico."
+        )
+
+        fig_risco_freq = px.scatter(
+            df,
+            x='Daily_Transaction_Count',
+            y='Risk_Score',
+            color='Fraud_Label',
+            title='Relação entre Frequência Diária e Pontuação de Risco',
+            labels={
+                "Daily_Transaction_Count": "Nº de Transações no Dia",
+                "Risk_Score": "Pontuação de Risco da Transação",
+                "Fraud_Label": "É Fraude? (0 = Não, 1 = Sim)"
+            },
+            color_discrete_map={0: 'rgba(99, 110, 250, 0.5)', 1: 'rgba(239, 85, 59, 0.8)'}, # Azul e Vermelho com transparência
+            hover_data=['Transaction_Amount'] # Adiciona informação extra ao passar o mouse
+        )
+        st.plotly_chart(fig_risco_freq, use_container_width=True)
+        st.info("💡 **Insight:** Procure por agrupamentos. É comum que transações fraudulentas (pontos vermelhos) se concentrem na área de alto risco e alta frequência de transações, indicando um comportamento anômalo do usuário.")
+
+elif pagina_atual == "Resumo Estratégico":
+    st.header("🏆 Resumo Estratégico e Recomendações")
+    st.markdown(
+        "Esta seção consolida todos os insights gerados nas fases anteriores. "
+        "Aqui, apresentamos o perfil claro da atividade fraudulenta e sugerimos ações "
+        "estratégicas para mitigar os riscos identificados."
+    )
+    st.divider()
+
+    # --- 1. O "Retrato Falado" da Fraude ---
+    st.subheader("O 'Retrato Falado' da Fraude")
+    with st.container(border=True):
+        st.markdown("""
+        Com base na análise dos dados, o perfil de uma transação fraudulenta se distingue claramente do comportamento de um cliente legítimo. As principais características são:
+
+        - **Padrão Temporal Anômalo:** A atividade fraudulenta é constante (24/7), o que faz com que sua **proporção seja drasticamente maior durante a madrugada** (entre 0h e 6h), quando a atividade de clientes genuínos é mínima.
+
+        - **Valores Enganosos:** Contrariando a intuição, a maioria das fraudes **não busca valores exorbitantes**. A mediana do valor fraudulento é consistentemente **inferior** à das transações legítimas, possivelmente uma tática para evitar a detecção por sistemas de alerta baseados em limites de valor.
+
+        - **Sinal de Risco Confiável:** A `Pontuação de Risco` (`Risk_Score`) pré-calculada demonstrou ser o **indicador individual mais forte e confiável**. Transações fraudulentas quase invariavelmente apresentam uma pontuação de risco elevada.
+        """)
+
+    st.divider()
+
+    # --- 2. Principais Fatores de Risco Identificados ---
+    st.subheader("Principais Fatores de Risco em Destaque")
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        st.markdown(
+            """
+            <div class='kpi-card color-4' style='height: 220px;'>
+                <h3>⏰ HORÁRIO CRÍTICO</h3>
+                <h2>Madrugada (0h-6h)</h2>
+                <p style='font-size: 0.9em;'>Neste período, a atividade legítima cai drasticamente, tornando qualquer transação inerentemente mais suspeita.</p>
+            </div>
+            """, unsafe_allow_html=True)
+
+    with col2:
+        st.markdown(
+            """
+            <div class='kpi-card color-3' style='height: 220px;'>
+                <h3>🚨 SINAL DE ALERTA</h3>
+                <h2>Risk Score Elevado</h2>
+                <p style='font-size: 0.9em;'>A Pontuação de Risco é o previsor mais fiel. Valores acima de 0.7 são um forte indicativo de fraude iminente.</p>
+            </div>
+            """, unsafe_allow_html=True)
+    
+    with col3:
+        st.markdown(
+            """
+            <div class='kpi-card color-2' style='height: 220px;'>
+                <h3>💰 PADRÃO INVERTIDO</h3>
+                <h2>Valores Baixos/Médios</h2>
+                <p style='font-size: 0.9em;'>A estratégia parece ser "voar abaixo do radar" com valores que não chamam atenção imediata.</p>
+            </div>
+            """, unsafe_allow_html=True)
+    
+    st.divider()
+
+    # --- 3. Recomendações Acionáveis para o Negócio ---
+    st.subheader("Recomendações Acionáveis para o Negócio")
+
+    with st.expander("**Ação 1: Revisar Regras de Alerta para a Madrugada**"):
+        st.markdown("""
+        **O Problema:** Regras de alerta baseadas apenas em valores altos são ineficazes durante a madrugada, pois as fraudes nesse horário podem ter valores baixos.
+        
+        **A Solução Sugerida:**
+        - Implementar regras de negócio dinâmicas que **aumentem a sensibilidade durante a madrugada**.
+        - Exemplo: Uma transação 'Online' de R$150,00 às 14h pode ser normal, mas a mesma transação às 3h da manhã deve, automaticamente, ter seu risco elevado e, potencialmente, ser direcionada para uma verificação adicional (como envio de OTP).
+        """)
+
+    with st.expander("**Ação 2: Adotar a Pontuação de Risco como Fator Crítico de Decisão**"):
+        st.markdown("""
+        **A Observação:** A variável `Risk_Score` é o indicador mais confiável encontrado nesta análise.
+        
+        **A Solução Sugerida:**
+        - **Priorização de Revisão:** A equipe de análise de fraude deve usar o `Risk_Score` como principal critério de fila. Todas as transações com score acima de um limiar (ex: 0.75) devem ser revisadas primeiro.
+        - **Bloqueio Automático:** Considerar a implementação de bloqueios automáticos para transações que excedam um limiar de risco extremo (ex: 0.95), prevenindo a perda antes mesmo da revisão humana.
+        """)
+
+    with st.expander("**Ação 3: Desenvolver Estratégias de Prevenção por Canal**"):
+        st.markdown("""
+        **O Contexto:** A análise mostrou que os padrões de valor, embora sigam uma tendência geral, têm nuances diferentes para cada tipo de transação ('POS', 'Online', etc.).
+        
+        **A Solução Sugerida:**
+        - Não tratar todos os canais da mesma forma. A equipe de produto ou risco deve analisar estes insights para criar políticas de segurança específicas por canal.
+        - Exemplo: Para transações 'Online', onde os outliers de fraude foram mais altos, pode ser necessário um passo de autenticação adicional (biometria, OTP) com mais frequência do que para transações 'POS'.
+        """)
