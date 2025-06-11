@@ -105,7 +105,7 @@ if 'aba_ativa' not in st.session_state:
     st.session_state.aba_ativa = 'home'  
     
 st.sidebar.button("📌 Análises Operacionais", on_click=lambda: st.session_state.update(aba_ativa='home'))
-st.sidebar.button("🔍 Filtros", on_click=lambda: st.session_state.update(aba_ativa='filtros'))
+st.sidebar.button("🔍 Painel de eficiência", on_click=lambda: st.session_state.update(aba_ativa='painel_eficiencia'))
 st.sidebar.button("⛽ Eficiencia Combustivel", on_click=lambda: st.session_state.update(aba_ativa='eficiencia_comb'))
 st.sidebar.button("📊 Gráficos Clientes", on_click=lambda: st.session_state.update(aba_ativa='graficos_clientes'))
 st.sidebar.button("🧑 Cliente", on_click=lambda: st.session_state.update(aba_ativa='cliente'))
@@ -757,7 +757,7 @@ if st.session_state.aba_ativa == 'home':
             st.warning("⚠️ Nenhum dado de rota encontrado para os filtros selecionados.")
 
 
-if st.session_state.aba_ativa == 'filtros':
+if st.session_state.aba_ativa == 'painel_eficiencia':
     query = '''
         SELECT 
             v.empresa_sigla,
@@ -775,243 +775,424 @@ if st.session_state.aba_ativa == 'filtros':
 
     st.markdown("""
         <style>
-        /* Container principal do conteúdo para espaçar da sidebar */
+        html, body, [data-testid="stAppViewContainer"] {
+            font-family: 'Inter', sans-serif;
+            color: #1f2937;
+            background-color: #f9fafb;
+        }
+
         [data-testid="stAppViewContainer"] > .main {
-            padding-left: 32px;
-            padding-right: 32px;
+            padding-left: 40px;
+            padding-right: 40px;
             padding-top: 24px;
             padding-bottom: 48px;
-            max-width: 900px;
+            max-width: 1200px;
             margin: auto;
         }
 
-        /* Container do selectbox */
-        div.stSelectbox > div {
-            background-color: #ffffff;
-            padding: 14px 18px;
-            border-radius: 10px;
-            border: 1.2px solid #ddd;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
-            margin-bottom: 36px;
-            position: relative;
-            font-family: 'Inter', sans-serif;
-            transition: border-color 0.3s ease, box-shadow 0.3s ease;
-        }
-        div.stSelectbox > div:hover {
-            border-color: #2563eb;
-            box-shadow: 0 4px 14px rgba(37, 99, 235, 0.15);
+        h1, h2, h3, h4 {
+            color: #1e3a8a;
+            font-weight: 800;
+            margin-bottom: 0.5em;
         }
 
-        div.stSelectbox select {
-            appearance: none;
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            border: none;
-            background: transparent;
-            width: 100%;
-            padding: 10px 38px 10px 10px;
-            font-size: 16px;
-            font-weight: 600;
-            color: #1f2937;
-            cursor: pointer;
-            outline: none;
-        }
-
-        div.stSelectbox div[role="combobox"]::after {
-            content: "▾";
-            position: absolute;
-            right: 18px;
-            top: 50%;
-            transform: translateY(-50%);
-            pointer-events: none;
-            font-size: 13px;
-            color: #6b7280;
-            font-weight: 700;
-        }
-
-        label[data-testid="stMarkdownContainer"] {
-            font-weight: 700;
-            margin-bottom: 12px;
-            display: block;
-            font-size: 17px;
-            color: #111827;
-            font-family: 'Inter', sans-serif;
-        }
-
-        /* Métricas mais clean */
         .big-number {
-            font-size: 2.4rem;  /* menor que antes */
-            font-weight: 700;
-            color: #333;
+            font-size: 2.6rem;
+            font-weight: 800;
+            color: #0f172a;
             margin-bottom: 4px;
-            font-family: 'Inter', sans-serif;
             line-height: 1.2;
         }
 
         .small-label {
             font-size: 1rem;
-            color: #555;
+            color: #475569;
             font-weight: 600;
-            font-family: 'Inter', sans-serif;
             margin-bottom: 20px;
-        }
-
-        .stColumns > div {
-            padding: 0 12px !important;
         }
 
         .metric-container {
             margin-bottom: 40px;
         }
 
-        h2, h3, h4 {
-            font-family: 'Inter', sans-serif;
-            color: #111827;
-            font-weight: 700;
-            margin-bottom: 20px;
+        div.stSelectbox > div {
+            background-color: #ffffff;
+            padding: 16px 20px;
+            border-radius: 12px;
+            border: 1.2px solid #d1d5db;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+            transition: 0.3s;
+        }
+        div.stSelectbox > div:hover {
+            border-color: #3b82f6;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+        }
+
+        div.stSelectbox div[role="combobox"]::after {
+            content: "▾";
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            pointer-events: none;
+            font-size: 14px;
+            color: #6b7280;
         }
 
         .stAlert {
-            font-family: 'Inter', sans-serif;
             font-size: 1rem;
-            color: #374151;
-            margin-top: 24px;
-            margin-bottom: 36px;
+            background-color: #e0f2fe !important;
+            border-left: 4px solid #0284c7 !important;
+            color: #1e3a8a !important;
+            padding: 16px;
+            border-radius: 8px;
+            margin-top: 20px;
+            margin-bottom: 20px;
         }
         </style>
     """, unsafe_allow_html=True)
 
 
-    st.header("📊 Métricas por Empresa")
+    # Cria as abas
+    tab1, tab2 = st.tabs(["🔎 Métricas da Empresa", "📈 Análises e Filtros Avançados"])
 
-    empresa_selecionada = st.selectbox(
-        "Selecione uma empresa:",
-        options=sorted(df['empresa_nome'].unique()),
-        index=0
-    )
+    # --- ABA 1 ---
+    with tab1:
+        st.header("📊 Métricas por Empresa")
 
-    df_empresa = df[df['empresa_nome'] == empresa_selecionada]
+        empresa_selecionada = st.selectbox(
+            "Selecione uma empresa:",
+            options=sorted(df['empresa_nome'].unique()),
+            index=0
+        )
 
-    if not df_empresa.empty:
-        total_voos = df_empresa['decolagens'].sum()
-        distancia_total = df_empresa['distancia_voada_km'].sum()
-        tem_dados_combustivel = 'combustivel_litros' in df_empresa.columns and (df_empresa['combustivel_litros'] > 0).any()
+        df_empresa = df[df['empresa_nome'] == empresa_selecionada]
 
-        if tem_dados_combustivel:
-            df_com_combustivel = df_empresa[df_empresa['combustivel_litros'] > 0]
-            consumo_medio = df_com_combustivel['distancia_voada_km'].sum() / df_com_combustivel['combustivel_litros'].sum()
-            eficiencia = consumo_medio
+        if not df_empresa.empty:
+            total_voos = df_empresa['decolagens'].sum()
+            distancia_total = df_empresa['distancia_voada_km'].sum()
+            tem_dados_combustivel = 'combustivel_litros' in df_empresa.columns and (df_empresa['combustivel_litros'] > 0).any()
+
+            if tem_dados_combustivel:
+                df_com_combustivel = df_empresa[df_empresa['combustivel_litros'] > 0]
+                eficiencia = df_com_combustivel['distancia_voada_km'].sum() / df_com_combustivel['combustivel_litros'].sum()
+            else:
+                eficiencia = None
+
+            with st.container():
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.markdown(f'<div class="big-number">{total_voos:,}</div>', unsafe_allow_html=True)
+                    st.markdown('<div class="small-label">Total de Voos</div>', unsafe_allow_html=True)
+                with col2:
+                    st.markdown(f'<div class="big-number">{distancia_total:,.0f}</div>', unsafe_allow_html=True)
+                    st.markdown('<div class="small-label">Distância Total (km)</div>', unsafe_allow_html=True)
+                with col3:
+                    if eficiencia is not None:
+                        st.markdown(f'<div class="big-number">{eficiencia:.2f}</div>', unsafe_allow_html=True)
+                        st.markdown('<div class="small-label">Eficiência (km/l)</div>', unsafe_allow_html=True)
+                    else:
+                        st.markdown(f'<div class="big-number" style="color:#9ca3af;">N/D</div>', unsafe_allow_html=True)
+                        st.markdown('<div class="small-label">Eficiência (sem dados)</div>', unsafe_allow_html=True)
+
+            st.subheader("Outras Estatísticas")
+            with st.container():
+                col4, col5 = st.columns(2)
+                with col4:
+                    media_distancia = df_empresa['distancia_voada_km'].sum() / df_empresa['decolagens'].sum()
+                    st.markdown(f'<div class="big-number" style="font-size: 2.8rem; color:#16a34a;">{media_distancia:,.0f}</div>', unsafe_allow_html=True)
+                    st.markdown('<div class="small-label">Média de Distância por Voo (km)</div>', unsafe_allow_html=True)
+                with col5:
+                    horas_totais = df_empresa['horas_voadas'].sum()
+                    st.markdown(f'<div class="big-number" style="font-size: 2.8rem; color:#dc2626;">{horas_totais:,.1f}</div>', unsafe_allow_html=True)
+                    st.markdown('<div class="small-label">Horas Totais de Voo</div>', unsafe_allow_html=True)
         else:
-            eficiencia = None
+            st.warning("Nenhum dado disponível para a empresa selecionada.")
 
-        with st.container():
-            col1, col2, col3 = st.columns(3)
+        meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
 
-            with col1:
-                st.markdown(f'<div class="big-number">{total_voos:,}</div>', unsafe_allow_html=True)
-                st.markdown('<div class="small-label">Total de Voos</div>', unsafe_allow_html=True)
+    
+        df_combustivel = df_empresa[df_empresa['combustivel_litros'] > 0]
 
-            with col2:
-                st.markdown(f'<div class="big-number">{distancia_total:,.0f}</div>', unsafe_allow_html=True)
-                st.markdown('<div class="small-label">Distância Total (km)</div>', unsafe_allow_html=True)
+        if df_combustivel.empty:
+            st.info("ℹ️ Esta empresa não possui dados de combustível disponíveis. Talvez opere apenas voos internacionais ou os dados não estão registrados.")
+        else:
+            df_empresa_mes = df_combustivel.groupby('mes').apply(
+                lambda x: x['distancia_voada_km'].sum() / x['combustivel_litros'].sum()
+            ).reset_index(name='eficiencia_km_l')
 
-            with col3:
-                if eficiencia is not None:
-                    st.markdown(f'<div class="big-number">{eficiencia:.2f}</div>', unsafe_allow_html=True)
-                    st.markdown('<div class="small-label">Eficiência (km/l)</div>', unsafe_allow_html=True)
-                else:
-                    st.markdown(f'<div class="big-number" style="color:#9ca3af;">N/D</div>', unsafe_allow_html=True)
-                    st.markdown('<div class="small-label">Eficiência (sem dados)</div>', unsafe_allow_html=True)
+            fig, ax = plt.subplots(figsize=(8, 4))
+            sns.lineplot(data=df_empresa_mes, x='mes', y='eficiencia_km_l', marker='o', color='#2563eb', linewidth=2, ax=ax)
+            ax.set_title('📊 Eficiência Mensal (km/l)', fontsize=14)
+            ax.set_ylabel('Eficiência (km/l)')
+            ax.set_xlabel('Mês')
+            ax.grid(True, linestyle='--', alpha=0.4)
 
-        st.subheader("Outras Estatísticas")
+            meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+            ax.set_xticks(df_empresa_mes['mes'])
+            ax.set_xticklabels([meses[m-1] for m in df_empresa_mes['mes']])
 
-        with st.container():
-            col4, col5 = st.columns(2)
+            st.pyplot(fig)
 
-            with col4:
-                media_distancia = df_empresa['distancia_voada_km'].sum() / df_empresa['decolagens'].sum()
-                st.markdown(f'<div class="big-number" style="font-size: 2.8rem; color:#16a34a;">{media_distancia:,.0f}</div>', unsafe_allow_html=True)
-                st.markdown('<div class="small-label">Média de Distância por Voo (km)</div>', unsafe_allow_html=True)
-
-            with col5:
-                horas_totais = df_empresa['horas_voadas'].sum()
-                st.markdown(f'<div class="big-number" style="font-size: 2.8rem; color:#dc2626;">{horas_totais:,.1f}</div>', unsafe_allow_html=True)
-                st.markdown('<div class="small-label">Horas Totais de Voo</div>', unsafe_allow_html=True)
-
-        if 'combustivel_litros' in df_empresa.columns and not tem_dados_combustivel:
-            st.info("Esta empresa não possui dados de consumo de combustível registrados.")
-    else:
-        st.warning("Nenhum dado disponível para a empresa selecionada.")
+        
+        df_mes = df_empresa.groupby('mes').agg({
+            'distancia_voada_km': 'sum',
+            'combustivel_litros': 'sum'
+        }).reset_index()
 
 
-    st.header("📊 Análises Gráficas")
+        fig, ax = plt.subplots(figsize=(10,5))
+        width = 0.4
 
-    # Filtra o DataFrame geral para considerar apenas registros com combustível > 0
-    df_com_combustivel_geral = df[df['combustivel_litros'] > 0]
+        ax.bar(df_mes['mes'] - width/2, df_mes['distancia_voada_km'], width=width, label='Distância Voada (km)', color='#2563eb')
+        ax.bar(df_mes['mes'] + width/2, df_mes['combustivel_litros'], width=width, label='Combustível Consumido (L)', color='#f97316')
 
-    # Agrupa por mês e calcula a eficiência média (km/l) no geral
-    df_eficiencia_geral_mes = df_com_combustivel_geral.groupby('mes').apply(
-        lambda x: x['distancia_voada_km'].sum() / x['combustivel_litros'].sum()
-    ).reset_index(name='eficiencia')
+        ax.set_xticks(df_mes['mes'])
+        ax.set_xticklabels([meses[m-1] for m in df_mes['mes']])
+        ax.set_xlabel('Mês')
+        ax.set_ylabel('Quantidade')
+        ax.set_title('Distância Voada x Combustível Consumido por Mês')
+        ax.legend()
 
-    # Meses presentes nos dados
-    meses_presentes = df_eficiencia_geral_mes['mes'].tolist()
-    meses_labels = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
-    ticks_labels = [meses_labels[m - 1] for m in meses_presentes]
+        # Adicionar os valores nas barras
+        def add_labels(bars):
+            for bar in bars:
+                height = bar.get_height()
+                ax.annotate(f'{height:,.0f}',
+                            xy=(bar.get_x() + bar.get_width() / 2, height),
+                            xytext=(0, 3),
+                            textcoords="offset points",
+                            ha='center', va='bottom', fontsize=8)
 
-    # Criar o gráfico
-    fig, ax = plt.subplots()
-    sns.lineplot(data=df_eficiencia_geral_mes, x='mes', y='eficiencia', marker='o', ax=ax)
-    ax.set_title('Eficiência Média Geral por Mês em 2025')
-    ax.set_xlabel('Mês')
-    ax.set_ylabel('Eficiência (km/l)')
-    ax.set_xticks(meses_presentes)
-    ax.set_xticklabels(ticks_labels)
-    ax.grid(True)
+        bars1 = ax.bar(df_mes['mes'] - width/2, df_mes['distancia_voada_km'], width=width, color='#2563eb')
+        bars2 = ax.bar(df_mes['mes'] + width/2, df_mes['combustivel_litros'], width=width, color='#f97316')
 
-    # Exibir no Streamlit
-    st.pyplot(fig)
+        add_labels(bars1)
+        add_labels(bars2)
 
-    # Agrupa e calcula a eficiência
-    df_top10 = (
-        df_com_combustivel_geral
-        .groupby(['empresa_nome'])
-        .apply(lambda x: x['distancia_voada_km'].sum() / x['combustivel_litros'].sum())
-        .reset_index(name='eficiencia_km_l')
-        .sort_values(by='eficiencia_km_l', ascending=False)
-        .head(10)
-    )
+        st.pyplot(fig)
 
-    # Gráfico de barras horizontal
-    fig, ax = plt.subplots(figsize=(8, 5))
-    sns.barplot(data=df_top10, x='eficiencia_km_l', y='empresa_nome', ax=ax, palette='Blues_r')
-    ax.set_title('Top 10 Empresas Mais Eficientes (km/l)')
-    ax.set_xlabel('Eficiência (km/l)')
-    ax.set_ylabel('Empresa')
 
-    st.pyplot(fig)
+        # Agrupando os dados por mês
+        df_horas_mes = df_empresa.groupby('mes').agg({
+            'horas_voadas': 'sum',
+            'decolagens': 'sum',
+            'distancia_voada_km': 'sum'
+        }).reset_index()
 
-    st.subheader("⏱️ Top 10 Empresas com Maior Velocidade Média de Voo")
+        # Calculando as médias
+        df_horas_mes['media_horas_por_voo'] = df_horas_mes['horas_voadas'] / df_horas_mes['decolagens']
+        df_horas_mes['media_km_por_voo'] = df_horas_mes['distancia_voada_km'] / df_horas_mes['decolagens']
 
-    # Agrupa por empresa: soma distância e horas voadas
-    df_velocidade = df.groupby('empresa_nome').agg({
-        'distancia_voada_km': 'sum',
-        'horas_voadas': 'sum'
-    }).reset_index()
+        # Verificar se as colunas estão no dataframe
+        print(df_horas_mes.columns)
+        print(df_horas_mes.head())
 
-    # Calcula a velocidade média km/h
-    df_velocidade['velocidade_media_kmh'] = df_velocidade['distancia_voada_km'] / df_velocidade['horas_voadas']
+        # Plot com dois eixos y
+        fig, ax1 = plt.subplots(figsize=(10,5))
 
-    # Ordena para pegar as top 10 empresas com maior velocidade média
-    df_velocidade_top10 = df_velocidade.sort_values(by='velocidade_media_kmh', ascending=False).head(10)
+        color1 = '#8b5cf6'
+        color2 = '#22d3ee'
 
-    # Plot do gráfico de barras horizontal
-    fig, ax = plt.subplots(figsize=(8,5))
-    sns.barplot(data=df_velocidade_top10, x='velocidade_media_kmh', y='empresa_nome', palette='plasma', ax=ax)
-    ax.set_xlabel('Velocidade Média (km/h)')
-    ax.set_ylabel('Empresa')
-    ax.set_title('Top 10 Empresas com Maior Velocidade Média de Voo')
-    st.pyplot(fig)
+        ax1.set_xlabel('Mês')
+        ax1.set_ylabel('Horas por Voo', color=color1)
+        sns.lineplot(data=df_horas_mes, x='mes', y='media_horas_por_voo', marker='o', color=color1, ax=ax1)
+        ax1.tick_params(axis='y', labelcolor=color1)
+
+        ax2 = ax1.twinx()
+        ax2.set_ylabel('Km por Voo', color=color2)
+        sns.lineplot(data=df_horas_mes, x='mes', y='media_km_por_voo', marker='o', color=color2, ax=ax2)
+        ax2.tick_params(axis='y', labelcolor=color2)
+
+        ax1.set_xticks(df_horas_mes['mes'])
+        ax1.set_xticklabels([meses[m-1] for m in df_horas_mes['mes']])
+
+        plt.title('Média de Horas e Km por Voo ao Longo dos Meses')
+        plt.grid(True, linestyle='--', alpha=0.3)
+        st.pyplot(fig)
+
+    # --- ABA 2 ---
+    with tab2:
+        st.markdown("### 🔍 Análise Resumida por Empresa com Filtros")
+
+        col1, col2 = st.columns(2)
+        empresas = sorted(df['empresa_nome'].unique())
+        meses = sorted(df['mes'].unique())
+
+        with col1:
+            empresa_filtro = st.multiselect("Filtrar por Empresa:", options=empresas)
+
+        with col2:
+            meses_filtro = st.multiselect("Filtrar por Mês:", options=meses)
+
+        if empresa_filtro and meses_filtro:
+            df_filtros = df[
+                (df['empresa_nome'].isin(empresa_filtro)) & (df['mes'].isin(meses_filtro))
+            ]
+
+            if df_filtros.empty:
+                st.warning("Nenhum dado encontrado com os filtros selecionados.")
+            else:
+                resumo = (
+                    df_filtros.groupby('empresa_nome')
+                    .agg({
+                        'distancia_voada_km': 'sum',
+                        'combustivel_litros': 'sum',
+                        'horas_voadas': 'sum',
+                        'decolagens': 'sum'
+                    })
+                    .reset_index()
+                )
+                resumo['eficiencia_km_l'] = resumo.apply(
+                    lambda row: row['distancia_voada_km'] / row['combustivel_litros']
+                    if row['combustivel_litros'] > 0 else None,
+                    axis=1
+                )
+                resumo['velocidade_kmh'] = resumo.apply(
+                    lambda row: row['distancia_voada_km'] / row['horas_voadas']
+                    if row['horas_voadas'] > 0 else None,
+                    axis=1
+                )
+                resumo['media_km_por_voo'] = resumo['distancia_voada_km'] / resumo['decolagens']
+                resumo = resumo.sort_values(by='eficiencia_km_l', ascending=False)
+
+                st.markdown("#### 📋 Resumo por Empresa")
+                st.dataframe(
+                    resumo[['empresa_nome', 'decolagens', 'distancia_voada_km', 'horas_voadas', 'combustivel_litros',
+                            'media_km_por_voo', 'eficiencia_km_l', 'velocidade_kmh']].rename(columns={
+                                'empresa_nome': 'Empresa',
+                                'decolagens': 'Voos',
+                                'distancia_voada_km': 'Distância (km)',
+                                'horas_voadas': 'Horas Voadas',
+                                'combustivel_litros': 'Combustível (L)',
+                                'media_km_por_voo': 'Média km/Voo',
+                                'eficiencia_km_l': 'Eficiência (km/l)',
+                                'velocidade_kmh': 'Velocidade Média (km/h)'
+                            }),
+                    use_container_width=True,
+                    hide_index=True
+                )
+
+                st.markdown("#### 📎 Dados Detalhados por Voo")
+                st.dataframe(
+                    df_filtros[['empresa_nome', 'mes', 'distancia_voada_km', 'horas_voadas', 'combustivel_litros', 'decolagens']],
+                    use_container_width=True,
+                    height=400
+                )
+        else:
+            st.info("Selecione ao menos uma empresa e um mês para visualizar os dados.")
+
+        st.header("📊 Análises Gráficas")
+
+        df_com_combustivel_geral = df[df['combustivel_litros'] > 0]
+        df_eficiencia_geral_mes = df_com_combustivel_geral.groupby('mes').apply(
+            lambda x: x['distancia_voada_km'].sum() / x['combustivel_litros'].sum()
+        ).reset_index(name='eficiencia')
+
+        meses_labels = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+        ticks_labels = [meses_labels[m - 1] for m in df_eficiencia_geral_mes['mes']]
+
+        fig, ax = plt.subplots(figsize=(10, 5))
+        sns.lineplot(data=df_eficiencia_geral_mes, x='mes', y='eficiencia', marker='o', color='#2563eb', linewidth=2.5, ax=ax)
+        ax.set_title('📈 Eficiência Média Geral por Mês em 2025', fontsize=16, fontweight='bold', color='#1e3a8a')
+        ax.set_xlabel('Mês')
+        ax.set_ylabel('Eficiência (km/l)')
+        ax.set_xticks(df_eficiencia_geral_mes['mes'])
+        ax.set_xticklabels(ticks_labels)
+        ax.grid(True, linestyle='--', alpha=0.3)
+        st.pyplot(fig)
+
+        df_top10 = (
+            df_com_combustivel_geral
+            .groupby(['empresa_nome'])
+            .apply(lambda x: x['distancia_voada_km'].sum() / x['combustivel_litros'].sum())
+            .reset_index(name='eficiencia_km_l')
+            .sort_values(by='eficiencia_km_l', ascending=False)
+            .head(10)
+        )
+
+        fig, ax = plt.subplots(figsize=(10, 6))
+        sns.barplot(data=df_top10, x='eficiencia_km_l', y='empresa_nome', palette='Blues_d', ax=ax)
+        ax.set_title('🏆 Top 10 Empresas Mais Eficientes (km/l)', fontsize=16, fontweight='bold', color='#1e3a8a')
+        ax.set_xlabel('Eficiência (km/l)')
+        ax.set_ylabel('')
+        st.pyplot(fig)
+
+        st.subheader("⏱️ Top 10 Empresas com Maior Velocidade Média de Voo")
+        df_velocidade = df.groupby('empresa_nome').agg({
+            'distancia_voada_km': 'sum',
+            'horas_voadas': 'sum'
+        }).reset_index()
+        df_velocidade['velocidade_media_kmh'] = df_velocidade['distancia_voada_km'] / df_velocidade['horas_voadas']
+        df_velocidade_top10 = df_velocidade.sort_values(by='velocidade_media_kmh', ascending=False).head(10)
+
+        fig, ax = plt.subplots(figsize=(10, 6))
+        sns.barplot(data=df_velocidade_top10, x='velocidade_media_kmh', y='empresa_nome', palette='viridis', ax=ax)
+        ax.set_title('🚀 Top 10 Empresas com Maior Velocidade Média de Voo', fontsize=16, fontweight='bold', color='#1e3a8a')
+        ax.set_xlabel('Velocidade Média (km/h)')
+        ax.set_ylabel('')
+        st.pyplot(fig)
+
+
+
+
+
+        df_volume = df.groupby('mes').agg({
+            'decolagens': 'sum',
+            'combustivel_litros': 'sum'
+        }).reset_index()
+
+        fig, ax1 = plt.subplots(figsize=(12,6))
+        width = 0.35
+        x = list(range(len(df_volume['mes'])))
+
+        # Barras de decolagens
+        bars1 = ax1.bar([pos - width/2 for pos in x], df_volume['decolagens'], width=width, label='Total decolagens', color='#2563eb')
+        ax1.set_ylabel('Total decolagens', color='#2563eb')
+        ax1.tick_params(axis='y', labelcolor='#2563eb')
+
+        # Eixo X
+        meses_labels = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+        ax1.set_xticks(x)
+        ax1.set_xticklabels([meses_labels[m-1] for m in df_volume['mes']])
+        ax1.set_xlabel('Mês')
+
+        # Barras combustível eixo direito
+        ax2 = ax1.twinx()
+        bars2 = ax2.bar([pos + width/2 for pos in x], df_volume['combustivel_litros'], width=width, label='Total combustível (L)', color='#f97316')
+        ax2.set_ylabel('Total combustível (L)', color='#f97316')
+        ax2.tick_params(axis='y', labelcolor='#f97316')
+
+        ax1.set_title('Volume de Operações e Consumo de Combustível por Mês')
+
+        # Função para formatar número em estilo brasileiro
+        def format_brl(value):
+            return f'{value:,.0f}'.replace(',', 'v').replace('.', ',').replace('v', '.')
+
+        # Adiciona os números acima das barras
+        def add_labels(bars, ax):
+            for bar in bars:
+                height = bar.get_height()
+                ax.text(
+                    bar.get_x() + bar.get_width() / 2,
+                    height * 1.01,
+                    format_brl(height),
+                    ha='center',
+                    va='bottom',
+                    fontsize=9,
+                    fontweight='bold'
+                )
+
+        add_labels(bars1, ax1)
+        add_labels(bars2, ax2)
+
+        # Legenda combinada
+        lines1, labels1 = ax1.get_legend_handles_labels()
+        lines2, labels2 = ax2.get_legend_handles_labels()
+        ax1.legend(lines1 + lines2, labels1 + labels2, loc='upper left')
+
+        plt.tight_layout()
+        st.pyplot(fig)
 
 # Manter as outras abas como estavam originalmente
 if st.session_state.aba_ativa == 'eficiencia_comb':
