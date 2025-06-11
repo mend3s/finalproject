@@ -107,7 +107,7 @@ if 'aba_ativa' not in st.session_state:
 st.sidebar.button("📌 Análises Operacionais", on_click=lambda: st.session_state.update(aba_ativa='home'))
 st.sidebar.button("🔍 Painel de eficiência", on_click=lambda: st.session_state.update(aba_ativa='painel_eficiencia'))
 st.sidebar.button("⛽ Eficiencia Combustivel", on_click=lambda: st.session_state.update(aba_ativa='eficiencia_comb'))
-st.sidebar.button("📊 Gráficos Clientes", on_click=lambda: st.session_state.update(aba_ativa='graficos_clientes'))
+st.sidebar.button("📊 KPIs e Métricas Gerenciais", on_click=lambda: st.session_state.update(aba_ativa='kpis'))
 st.sidebar.button("🧑 Cliente", on_click=lambda: st.session_state.update(aba_ativa='cliente'))
 st.sidebar.button("🚫 Análise de Voos Improdutivos Combustivel", on_click=lambda: st.session_state.update(aba_ativa='voos_impro'))
 st.sidebar.button("🚫 Análise de Voos Improdutivos Passageiros/Bagagem", on_click=lambda: st.session_state.update(aba_ativa='voos_impro_pas'))
@@ -1503,5 +1503,393 @@ if st.session_state.aba_ativa == 'rotas':
 
     st.subheader("Média Geral de Eficiência")
     st.metric(label="Média Geral (km/l)", value=f"{media_eficiencia:.2f}")
-
+#aba de kpis gerenciais
+if st.session_state.aba_ativa == 'kpis':
+    st.markdown(
+        """
+        <style>
+        [data-testid="stAppViewContainer"] {
+            background-color: #000000;
+        }
+        
+        .kpi-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 1.5rem;
+            border-radius: 1rem;
+            color: white;
+            text-align: center;
+            margin: 0.5rem 0;
+        }
+        
+        .kpi-card h3 {
+            margin: 0;
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: white;
+        }
+        
+        .kpi-card p {
+            margin: 0.5rem 0 0 0;
+            font-size: 1rem;
+            opacity: 0.9;
+            color: white;
+        }
+        
+        .chart-container {
+            background-color: white;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            margin: 1rem 0;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+    
+    # Criar a VIEW SQL para KPIs (se não existir)
+    cursor = conn.cursor()
+    cursor.execute('''
+        CREATE VIEW IF NOT EXISTS vw_kpis_voo AS
+        SELECT 
+            v.voo_id,
+            v.empresa_sigla,
+            v.ano,
+            v.mes,
+            v.aeroporto_origem_sigla,
+            v.aeroporto_destino_sigla,
+            v.natureza,
+            v.grupo_voo,
+            v.distancia_voada_km,
+            v.combustivel_litros,
+            v.decolagens,
+            v.horas_voadas,
+            e.empresa_nome,
+            COALESCE(cp.passageiros_pagos, 0) + COALESCE(cp.passageiros_gratis, 0) as total_passageiros,
+            COALESCE(cp.bagagem_kg, 0) as bagagem_kg,
+            -- Simular métricas ASK e RPK baseadas nos dados disponíveis
+            CASE 
+                WHEN v.distancia_voada_km > 0 THEN 
+                    -- ASK = Assentos disponíveis estimados * distância
+                    (COALESCE(cp.passageiros_pagos, 0) + COALESCE(cp.passageiros_gratis, 0)) * 1.3 * v.distancia_voada_km
+                ELSE 0 
+            END as ASK_estimado,
+            CASE 
+                WHEN v.distancia_voada_km > 0 THEN 
+                    -- RPK = Passageiros reais * distância
+                    (COALESCE(cp.passageiros_pagos, 0) + COALESCE(cp.passageiros_gratis, 0)) * v.distancia_voada_km
+                ELSE 0 
+            END as RPK_real,
+            -- Payload = bagagem + peso estimado dos passageiros
+            COALESCE(cp.bagagem_kg, 0) + ((COALESCE(cp.passageiros_pagos, 0) + COALESCE(cp.passageiros_gratis, 0)) * 80) as payload_total,
+            -- KPIs Calculados
+            CASE 
+                WHEN (COALESCE(cp.passageiros_pagos, 0) + COALESCE(cp.passageiros_gratis, 0)) * 1.3 > 0 THEN 
+                    ((COALESCE(cp.passageiros_pagos, 0) + COALESCE(cp.passageiros_gratis, 0)) / 
+                     ((COALESCE(cp.passageiros_pagos, 0) + COALESCE(cp.passageiros_gratis, 0)) * 1.3)) * 100
+                ELSE 0 
+            END as taxa_ocupacao_pct,
+            CASE 
+                WHEN v.decolagens > 0 THEN 
+                    (COALESCE(cp.bagagem_kg, 0) + ((COALESCE(cp.passageiros_pagos, 0) + COALESCE(cp.passageiros_gratis, 0)) * 80)) / v.decolagens
+                ELSE 0 
+            END as payload_medio_por_voo,
+            CASE 
+                WHEN v.distancia_voada_km > 0 THEN 
+                    (COALESCE(cp.passageiros_pagos, 0) + COALESCE(cp.passageiros_gratis, 0)) / v.distancia_voada_km * 100
+                ELSE 0 
+            END as passageiros_por_km,
+            (COALESCE(cp.passageiros_pagos, 0) + COALESCE(cp.passageiros_gratis, 0)) * 1.3 as assentos_disponivel_estimado
+        FROM voo v
+        JOIN empresa e ON v.empresa_sigla = e.empresa_sigla
+        LEFT JOIN carga_passageiros cp ON v.voo_id = cp.voo_id
+    ''')
+    conn.commit()
+    
+    # Função para criar cards de KPIs
+    def create_kpi_card(title, value, subtitle=""):
+        st.markdown(f"""
+        <div class="kpi-card">
+            <h3>{value}</h3>
+            <p>{title}</p>
+            {f'<small style="opacity: 0.8; color: white;">{subtitle}</small>' if subtitle else ''}
+        </div>
+        """, unsafe_allow_html=True)
+    
+    # Header principal
+    st.title("📊 KPIs e Métricas Gerenciais")
+    st.write("Análise detalhada das métricas de performance das operações de voo")
+    
+    # Filtros principais
+    st.markdown("### 🔍 Filtros")
+    col_filter1, col_filter2 = st.columns(2)
+    
+    with col_filter1:
+        # Filtro por empresa
+        empresas_query = "SELECT DISTINCT empresa_sigla, empresa_nome FROM empresa ORDER BY empresa_nome"
+        empresas_df = pd.read_sql_query(empresas_query, conn)
+        opcoes_empresas = ['Todas'] + [f"{row['empresa_nome']} ({row['empresa_sigla']})" for _, row in empresas_df.iterrows()]
+        empresa_selecionada_display = st.selectbox("Empresa:", opcoes_empresas, key="kpi_empresa")
+        
+        if empresa_selecionada_display != 'Todas':
+            empresa_selecionada = empresa_selecionada_display.split('(')[1].replace(')', '')
+        else:
+            empresa_selecionada = 'Todas'
+    
+    with col_filter2:
+        tipos_voo = ['Todos', 'DOMÉSTICA', 'INTERNACIONAL']
+        tipo_voo_selecionado = st.selectbox("Tipo de Voo:", tipos_voo, key="kpi_tipo")
+    
+    # Construir query com filtros
+    where_conditions = []
+    if empresa_selecionada != 'Todas':
+        where_conditions.append(f"empresa_sigla = '{empresa_selecionada}'")
+    if tipo_voo_selecionado != 'Todos':
+        where_conditions.append(f"natureza = '{tipo_voo_selecionado}'")
+    
+    where_clause = "WHERE " + " AND ".join(where_conditions) if where_conditions else ""
+    
+    # Carregar dados filtrados
+    query_kpis = f"""
+    SELECT * FROM vw_kpis_voo
+    {where_clause}
+    ORDER BY ano DESC, mes DESC
+    """
+    
+    df_kpis = pd.read_sql_query(query_kpis, conn)
+    
+    if df_kpis.empty:
+        st.warning("⚠️ Nenhum dado encontrado para os filtros selecionados.")
+    else:
+        # Calcular métricas agregadas
+        total_ask = df_kpis['ASK_estimado'].sum()
+        total_rpk = df_kpis['RPK_real'].sum()
+        taxa_ocupacao_media = (total_rpk / total_ask * 100) if total_ask > 0 else 0
+        payload_medio_geral = df_kpis['payload_medio_por_voo'].mean()
+        passageiros_km_medio = df_kpis['passageiros_por_km'].mean()
+        
+        # Cards de KPIs principais
+        st.markdown("### 📈 Indicadores Principais")
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            create_kpi_card(
+                "Taxa Média de Ocupação",
+                f"{taxa_ocupacao_media:.1f}%",
+                "RPK / ASK"
+            )
+        
+        with col2:
+            create_kpi_card(
+                "Payload Médio por Voo",
+                f"{payload_medio_geral:.0f} kg",
+                "Peso transportado por voo"
+            )
+        
+        with col3:
+            create_kpi_card(
+                "Passageiros por 100km",
+                f"{passageiros_km_medio:.1f}",
+                "Densidade de passageiros"
+            )
+        
+        # Gráficos dos KPIs
+        st.markdown("---")
+        st.markdown("### 📊 Análises Visuais")
+        
+        tab1, tab2, tab3 = st.tabs(["📈 Por Empresa", "📅 Evolução Temporal", "🛣️ Por Rota"])
+        
+        with tab1:
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.markdown("#### Taxa de Ocupação por Empresa")
+                ocupacao_empresa = df_kpis.groupby(['empresa_sigla', 'empresa_nome']).agg({
+                    'ASK_estimado': 'sum',
+                    'RPK_real': 'sum'
+                }).reset_index()
+                ocupacao_empresa['taxa_ocupacao'] = (ocupacao_empresa['RPK_real'] / ocupacao_empresa['ASK_estimado']) * 100
+                ocupacao_empresa = ocupacao_empresa.sort_values('taxa_ocupacao', ascending=True)
+                
+                fig_ocupacao = px.bar(
+                    ocupacao_empresa,
+                    x='taxa_ocupacao',
+                    y='empresa_sigla',
+                    orientation='h',
+                    title='Taxa de Ocupação por Empresa (%)',
+                    color='taxa_ocupacao',
+                    color_continuous_scale='Viridis',
+                    labels={'taxa_ocupacao': 'Taxa de Ocupação (%)', 'empresa_sigla': 'Empresa'}
+                )
+                fig_ocupacao.update_layout(height=400, showlegend=False)
+                st.plotly_chart(fig_ocupacao, use_container_width=True)
+            
+            with col2:
+                st.markdown("#### Payload Médio por Empresa")
+                payload_empresa = df_kpis.groupby(['empresa_sigla', 'empresa_nome']).agg({
+                    'payload_medio_por_voo': 'mean'
+                }).reset_index()
+                payload_empresa = payload_empresa.sort_values('payload_medio_por_voo', ascending=True)
+                
+                fig_payload = px.bar(
+                    payload_empresa,
+                    x='payload_medio_por_voo',
+                    y='empresa_sigla',
+                    orientation='h',
+                    title='Payload Médio por Empresa (kg)',
+                    color='payload_medio_por_voo',
+                    color_continuous_scale='Blues',
+                    labels={'payload_medio_por_voo': 'Payload Médio (kg)', 'empresa_sigla': 'Empresa'}
+                )
+                fig_payload.update_layout(height=400, showlegend=False)
+                st.plotly_chart(fig_payload, use_container_width=True)
+            
+            # Gráfico de capacidade vs utilização
+            st.markdown("#### Assentos Disponíveis vs Passageiros Reais")
+            capacidade = df_kpis.groupby(['empresa_sigla', 'empresa_nome']).agg({
+                'assentos_disponivel_estimado': 'sum',
+                'total_passageiros': 'sum'
+            }).reset_index()
+            
+            fig_capacidade = go.Figure()
+            fig_capacidade.add_trace(go.Bar(
+                name='Assentos Disponíveis (estimado)',
+                x=capacidade['empresa_sigla'],
+                y=capacidade['assentos_disponivel_estimado'],
+                marker_color='lightblue'
+            ))
+            fig_capacidade.add_trace(go.Bar(
+                name='Passageiros Reais',
+                x=capacidade['empresa_sigla'],
+                y=capacidade['total_passageiros'],
+                marker_color='darkblue'
+            ))
+            fig_capacidade.update_layout(
+                title='Capacidade vs Utilização por Empresa',
+                barmode='group',
+                height=400,
+                xaxis_title='Empresa',
+                yaxis_title='Quantidade'
+            )
+            st.plotly_chart(fig_capacidade, use_container_width=True)
+        
+        with tab2:
+            st.markdown("#### Evolução da Taxa de Ocupação ao Longo do Tempo")
+            
+            evolucao_temporal = df_kpis.groupby(['ano', 'mes']).agg({
+                'ASK_estimado': 'sum',
+                'RPK_real': 'sum',
+                'payload_medio_por_voo': 'mean'
+            }).reset_index()
+            evolucao_temporal['taxa_ocupacao'] = (evolucao_temporal['RPK_real'] / evolucao_temporal['ASK_estimado']) * 100
+            evolucao_temporal['periodo'] = evolucao_temporal['ano'].astype(str) + '-' + evolucao_temporal['mes'].astype(str).str.zfill(2)
+            
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                fig_evolucao = px.line(
+                    evolucao_temporal,
+                    x='periodo',
+                    y='taxa_ocupacao',
+                    title='Taxa de Ocupação Mensal (%)',
+                    markers=True,
+                    line_shape='spline'
+                )
+                fig_evolucao.update_layout(height=400)
+                fig_evolucao.update_xaxes(title='Período')
+                fig_evolucao.update_yaxes(title='Taxa de Ocupação (%)')
+                st.plotly_chart(fig_evolucao, use_container_width=True)
+            
+            with col2:
+                fig_payload_tempo = px.line(
+                    evolucao_temporal,
+                    x='periodo',
+                    y='payload_medio_por_voo',
+                    title='Payload Médio por Voo Mensal (kg)',
+                    markers=True,
+                    line_shape='spline',
+                    color_discrete_sequence=['#FF6B6B']
+                )
+                fig_payload_tempo.update_layout(height=400)
+                fig_payload_tempo.update_xaxes(title='Período')
+                fig_payload_tempo.update_yaxes(title='Payload Médio (kg)')
+                st.plotly_chart(fig_payload_tempo, use_container_width=True)
+        
+        with tab3:
+            st.markdown("#### Análise por Rota")
+            
+            # Top rotas por volume de passageiros
+            rotas_analise = df_kpis.groupby(['aeroporto_origem_sigla', 'aeroporto_destino_sigla']).agg({
+                'total_passageiros': 'sum',
+                'taxa_ocupacao_pct': 'mean',
+                'payload_medio_por_voo': 'mean',
+                'voo_id': 'count'
+            }).reset_index()
+            rotas_analise.rename(columns={'voo_id': 'total_voos'}, inplace=True)
+            rotas_analise['rota'] = rotas_analise['aeroporto_origem_sigla'] + ' → ' + rotas_analise['aeroporto_destino_sigla']
+            rotas_analise = rotas_analise.sort_values('total_passageiros', ascending=False).head(15)
+            
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                fig_rotas_pass = px.bar(
+                    rotas_analise,
+                    x='total_passageiros',
+                    y='rota',
+                    orientation='h',
+                    title='Top 15 Rotas por Volume de Passageiros',
+                    color='taxa_ocupacao_pct',
+                    color_continuous_scale='RdYlGn',
+                    labels={'total_passageiros': 'Total Passageiros', 'rota': 'Rota'}
+                )
+                fig_rotas_pass.update_layout(height=500)
+                fig_rotas_pass.update_yaxes(categoryorder="total ascending")
+                st.plotly_chart(fig_rotas_pass, use_container_width=True)
+            
+            with col2:
+                fig_scatter_rotas = px.scatter(
+                    rotas_analise,
+                    x='taxa_ocupacao_pct',
+                    y='payload_medio_por_voo',
+                    size='total_passageiros',
+                    hover_data=['rota', 'total_voos'],
+                    title='Taxa de Ocupação vs Payload por Rota',
+                    labels={
+                        'taxa_ocupacao_pct': 'Taxa de Ocupação (%)',
+                        'payload_medio_por_voo': 'Payload Médio (kg)'
+                    }
+                )
+                fig_scatter_rotas.update_layout(height=500)
+                st.plotly_chart(fig_scatter_rotas, use_container_width=True)
+        
+        # Tabela de dados detalhados
+        st.markdown("---")
+        st.markdown("### 📋 Dados Detalhados")
+        
+        # Seletor de colunas para exibir
+        colunas_disponiveis = [
+            'empresa_sigla', 'empresa_nome', 'ano', 'mes', 'natureza',
+            'taxa_ocupacao_pct', 'payload_medio_por_voo', 'passageiros_por_km',
+            'total_passageiros', 'distancia_voada_km', 'decolagens'
+        ]
+        
+        colunas_selecionadas = st.multiselect(
+            "Selecione as colunas para exibir:",
+            colunas_disponiveis,
+            default=['empresa_sigla', 'ano', 'mes', 'taxa_ocupacao_pct', 'payload_medio_por_voo', 'total_passageiros'],
+            key="kpi_colunas"
+        )
+        
+        if colunas_selecionadas:
+            df_display = df_kpis[colunas_selecionadas].copy()
+            
+            # Formatação dos dados para exibição
+            if 'taxa_ocupacao_pct' in df_display.columns:
+                df_display['taxa_ocupacao_pct'] = df_display['taxa_ocupacao_pct'].round(1)
+            if 'payload_medio_por_voo' in df_display.columns:
+                df_display['payload_medio_por_voo'] = df_display['payload_medio_por_voo'].round(0)
+            if 'passageiros_por_km' in df_display.columns:
+                df_display['passageiros_por_km'] = df_display['passageiros_por_km'].round(2)
+            
+            st.dataframe(df_display, use_container_width=True, height=400)
 conn.close()
