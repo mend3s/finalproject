@@ -14,6 +14,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 from sklearn.preprocessing import StandardScaler
 from sklearn.cluster import KMeans
+from xgboost import XGBClassifier
 
 # --- Configuração da Página ---
 st.set_page_config(
@@ -329,55 +330,47 @@ elif pagina_atual == "Analise Exploratoria":
         st.plotly_chart(fig_corr, use_container_width=True)
 
         st.markdown("---")
-        st.markdown("---")
+        st.subheader("Análise de Importância de Variáveis com XGBoost")
         
-        # --- 3.3 Análise de Cluster (Técnica Avançada) ---
-        st.markdown("#### Análise de Cluster (Técnica Avançada)")
-        st.info("Usamos Machine Learning para encontrar grupos (clusters) de transações com comportamentos similares, sem saber se são fraude ou não. Depois, analisamos a taxa de fraude em cada grupo descoberto.")
-
-        # Função para rodar o clustering (com cache para não re-executar a cada interação)
-        @st.cache_data
-        def rodar_clustering(dataframe, features, n_clusters=4):
-            data_cluster = dataframe[features].copy()
+        def preparar_dados_para_modelo(df):
+            df_processado = pd.get_dummies(df.drop(columns=['Transaction_ID', 'User_ID', 'Timestamp']))
+            X = df_processado.drop(columns='Fraud_Label')
+            y = df_processado['Fraud_Label']
             
-            # Padroniza os dados (importante para o K-Means)
-            scaler = StandardScaler()
-            data_scaled = scaler.fit_transform(data_cluster)
-            
-            # Roda o algoritmo K-Means
-            kmeans = KMeans(n_clusters=n_clusters, random_state=42, n_init=10)
-            kmeans.fit(data_scaled)
-            
-            return kmeans.labels_
-
-        # Selecionando as features para o cluster
-        features_cluster = ['Daily_Transaction_Count', 'Avg_Transaction_Amount_7d', 'Transaction_Distance']
+            return X, y
         
-        # Adiciona a coluna de cluster ao DataFrame
-        df['Cluster'] = rodar_clustering(df, features_cluster)
-        
-        # Análise dos resultados do cluster
-        col_cluster1, col_cluster2 = st.columns([1, 2])
-        with col_cluster1:
-            st.markdown("##### Taxa de Fraude por Cluster")
-            taxa_fraude_cluster = df.groupby('Cluster')['Fraud_Label'].mean().reset_index()
-            taxa_fraude_cluster['Fraud_Label'] = taxa_fraude_cluster['Fraud_Label'] * 100 # Converte para %
+        def treinar_modelo_xgboost_e_obter_importancias(df):
+            X, y = preparar_dados_para_modelo(df)
             
-            fig_cluster_bar = px.bar(taxa_fraude_cluster, x='Cluster', y='Fraud_Label',
-                                     title='Taxa de Fraude (%) em Cada Cluster',
-                                     labels={'Fraud_Label': 'Taxa de Fraude (%)'})
-            st.plotly_chart(fig_cluster_bar, use_container_width=True)
+            model = XGBClassifier(n_estimators=100, random_state=42, use_label_encoder=False, eval_metric='logloss')
+            model.fit(X, y)
+            
+            importancias = pd.DataFrame({
+                'Variavel': X.columns,
+                'Importancia': model.feature_importances_
+            }).sort_values(by='Importancia', ascending=False)
+            
+            return importancias
+        
+        with st.spinner("Treinando modelo XGBoost para analisar as variáveis..."):
+            df_importancias = treinar_modelo_xgboost_e_obter_importancias(df)
+        
+        #st.success("Análise de importância com XGBoost concluída!")
 
-        with col_cluster2:
-            st.markdown("##### Visualização 3D dos Clusters")
-            fig_cluster_3d = px.scatter_3d(df, 
-                                           x='Transaction_Amount', 
-                                           y='Transaction_Distance', 
-                                           z='Account_Balance',
-                                           color='Cluster',
-                                           title='Clusters de Comportamento de Transação',
-                                           hover_data=['Fraud_Label'])
-            st.plotly_chart(fig_cluster_3d, use_container_width=True)
+        top_20_features = df_importancias.head(20)
+
+        fig_importancia = px.bar(
+            top_20_features,
+            x='Importancia',
+            y='Variavel',
+            orientation='h',
+            title='As 20 Variáveis Mais Importantes (Análise com XGBoost)',
+            labels={'Importancia': 'Nível de Importância (Score)', 'Variavel': 'Variável'},
+            height=600
+        )
+        fig_importancia.update_layout(yaxis={'categoryorder':'total ascending'})
+        st.plotly_chart(fig_importancia, use_container_width=True)
+        
             
 elif pagina_atual == "Análise Direcionada":
     st.header("🎯 Análise Direcionada de Fraude")
