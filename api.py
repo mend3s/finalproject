@@ -14,6 +14,7 @@ from streamlit_folium import st_folium
 from streamlit_folium import folium_static
 
 
+
 conn = sqlite3.connect("dados_voo.db")
 cursor = conn.cursor()
 
@@ -109,12 +110,11 @@ st.sidebar.button("🔍 Filtros", on_click=lambda: st.session_state.update(aba_a
 st.sidebar.button("⛽ Eficiencia Combustivel", on_click=lambda: st.session_state.update(aba_ativa='eficiencia_comb'))
 st.sidebar.button("📊 Gráficos Clientes", on_click=lambda: st.session_state.update(aba_ativa='graficos_clientes'))
 st.sidebar.button("🧑 Cliente", on_click=lambda: st.session_state.update(aba_ativa='cliente'))
-st.sidebar.button("🚫 Análise de Voos Improdutivos Combustivel", on_click=lambda: st.session_state.update(aba_ativa='voos_impro'))
-st.sidebar.button("🚫 Análise de Voos Improdutivos Passageiros/Bagagem", on_click=lambda: st.session_state.update(aba_ativa='voos_impro_pas'))
-st.sidebar.button("🌎 Rota e Geografia", on_click=lambda: st.session_state.update(aba_ativa='rotas'))
+st.sidebar.button("🚫 Análise de Voos Combustivel", on_click=lambda: st.session_state.update(aba_ativa='voos_impro'))
+st.sidebar.button("🚫 Análise de Voos Passageiros/Bagagem", on_click=lambda: st.session_state.update(aba_ativa='voos_impro_pas'))
+st.sidebar.button("🌎 Rota e Geografia", on_click =lambda: st.session_state.update(aba_ativa='rotas'))
 st.sidebar.button("📦 Produtos", on_click=lambda: st.session_state.update(aba_ativa='produtos'))
 
-# Função para criar big numbers
 def create_big_number_card(title, value, subtitle=""):
     st.markdown(f"""
     <div class="metric-card">
@@ -968,7 +968,6 @@ if st.session_state.aba_ativa == 'filtros':
     ax.set_title('Top 10 Empresas com Maior Velocidade Média de Voo')
     st.pyplot(fig)
 
-# Manter as outras abas como estavam originalmente
 if st.session_state.aba_ativa == 'eficiencia_comb':
 
         st.markdown(
@@ -1027,7 +1026,6 @@ if st.session_state.aba_ativa == 'eficiencia_comb':
             ax.scatter(botton3['empresa_nome'], botton3['eficiencia_km_por_litro'], color='red', label='Bottom 3')
             ax.axhline(y=media_eficiencia, color='blue', linestyle='--', label=f'Média ({media_eficiencia:.2f} km/l)')
 
-            # Configurando rótulos e título
             ax.set_xlabel("Empresas")
             ax.set_ylabel("Eficiência (km/l)")
             ax.set_title("Top 3 e Bottom 3 em Eficiência de Combustível")
@@ -1036,7 +1034,6 @@ if st.session_state.aba_ativa == 'eficiencia_comb':
             ax.legend()
             ax.grid(True)
 
-            # Exibindo gráfico no Streamlit
             st.pyplot(fig)
             empresa_selecionada = st.selectbox("Selecione uma empresa", df['empresa_nome'].unique())
             dados_empresa = df[df['empresa_nome'] == empresa_selecionada]
@@ -1108,174 +1105,429 @@ if st.session_state.aba_ativa == 'voos_impro':
             df = pd.read_sql_query(query, conn)
             return df
 
-        df = carregar_dados()
 
+        df = carregar_dados()
 
         tab1, tab2 = st.tabs(["Análise por Empresa", "Distribuição por Região"])
 
         with tab1:
-            st.title("Análise de Voos Improdutivos (Combustível)")
+            st.title("Análise de Voos Com Alto Gasto De Combustível")
+
+            total_voos = len(df)
+            total_voos_improdutivos = len(df[(df["natureza"] != "INTERNACIONAL") & 
+                                            (df["combustivel_litros"] / df["distancia_voada_km"] > 1)])
+            percentual_improdutivo = (total_voos_improdutivos / total_voos) * 100 if total_voos > 0 else 0
+            media_distancia = df["distancia_voada_km"].mean()
+            media_combustivel = df["combustivel_litros"].mean()
+
+            col1, col2, col3 = st.columns(3)
+
+            col1.metric("✈️ Total de Voos", f"{total_voos:,}")
+            col2.metric("⛽ Voos Improdutivos (consumo maior que 1 km/l)", f"{total_voos_improdutivos:,}")
+            col3.metric("⚠️ % Voos Improdutivos", f"{percentual_improdutivo:.2f}%")
+
             st.write("Selecione uma empresa para visualizar os dados.")
-
-
-            empresas_disponiveis = df["empresa_nome"].unique()
+            empresas_domesticas = df[df["natureza"].str.upper() == "DOMÉSTICA"]
+            empresas_disponiveis = empresas_domesticas["empresa_nome"].unique()
             empresa_selecionada = st.selectbox("Escolha uma empresa:", empresas_disponiveis)
-
 
             df_filtrado = df[df["empresa_nome"] == empresa_selecionada]
 
-            if "natureza" in df_filtrado.columns:
-                voos_internacionais = df_filtrado[df_filtrado["natureza"] == "INTERNACIONAL"]
-                if not voos_internacionais.empty:
-                    st.warning("Os dados de combustível não são fornecidos para voos internacionais.")
+            if "natureza" not in df_filtrado.columns:
+                st.error("Coluna 'natureza' não encontrada no conjunto de dados.")
+            else:
+                df_domestico = df_filtrado[df_filtrado["natureza"].str.upper() == "DOMÉSTICA"]
 
-            st.bar_chart(df_filtrado[["distancia_voada_km", "combustivel_litros"]])
-            filtro_improdutivo = df_filtrado[
-                (df_filtrado["natureza"] != "INTERNACIONAL") &
-                (df_filtrado["combustivel_litros"] / df_filtrado["distancia_voada_km"] > 1)
-            ]
-            if "natureza" in df_filtrado.columns:
-                voos_internacionais = df_filtrado[df_filtrado["natureza"] == "INTERNACIONAL"]
-                if not voos_internacionais.empty:
-                    st.warning("Os dados de combustível não são fornecidos para voos internacionais.")
+                if df_domestico.empty:
+                    st.error("Não há dados disponíveis para combustivel desta empresa.")
+                else:
+                    voos_internacionais = df_filtrado[df_filtrado["natureza"].str.upper() == "INTERNACIONAL"]
+                    if not voos_internacionais.empty:
+                        st.warning("Os dados de combustível não são fornecidos para voos INTERNACIONAIS. Apenas DOMÉSTICOS foram considerados.")
 
-            st.write("Voos improdutivos (alto consumo de combustível em relação à distância voada):")
-            st.dataframe(filtro_improdutivo)
+                    st.bar_chart(df_domestico[["distancia_voada_km", "combustivel_litros"]])
+
+                    filtro_improdutivo = df_domestico[
+                        (df_domestico["combustivel_litros"] / df_domestico["distancia_voada_km"] > 1)
+                    ]
+
+                    st.write("Voos improdutivos (alto consumo de combustível em relação à distância voada):")
+                    st.dataframe(filtro_improdutivo)
+
+                    total_voos = len(df_domestico)
+                    total_improdutivos = len(filtro_improdutivo)
+                    percentual_improdutivo = (total_improdutivos / total_voos) * 100 if total_voos > 0 else 0
 
 
-            total_voos = len(df_filtrado)
-            total_improdutivos = len(filtro_improdutivo)
-            percentual_improdutivo = (total_improdutivos / total_voos) * 100 if total_voos > 0 else 0
-            st.write(f"**Total voos:** {total_voos}")
-            st.write(f"**Percentual de voos improdutivos:** {percentual_improdutivo:.2f}%")
+                    st.subheader(f"**Total de voos DOMÉSTICOS:** {total_voos}")
+                    st.subheader(f"**Percentual de voos improdutivos:** {percentual_improdutivo:.2f}%")
 
-            with tab2:
-                st.title("Distribuição de Voos Improdutivos por Região")
+                    with tab2:
+                        st.title("Distribuição de Voos Improdutivos por Região")
 
-                if "natureza" in df_filtrado.columns and any(df_filtrado["natureza"].str.upper() == "INTERNACIONAL"):
-                    st.warning("Os dados de região não se aplicam para voos internacionais.")
-                if "natureza" in df_filtrado.columns and any(df_filtrado["natureza"].str.upper() == "DOMÉSTICA"):
-                    regioes_improdutivas = filtro_improdutivo["aeroporto_regiao"].value_counts()
-                    st.write("Voos improdutivos por região:")
-                    st.bar_chart(regioes_improdutivas)
+                        if "aeroporto_regiao" not in df_domestico.columns:
+                            st.warning("A coluna 'aeroporto_regiao' não está disponível para análise regional.")
+                        else:
+                            regioes_improdutivas = filtro_improdutivo["aeroporto_regiao"].value_counts()
+                            if regioes_improdutivas.empty:
+                                st.info("Nenhum voo improdutivo foi identificado para análise por região.")
+                            else:
+                                st.write("Voos improdutivos por região:")
+                                st.bar_chart(regioes_improdutivas)
 
 if st.session_state.aba_ativa == 'voos_impro_pas':
-        st.markdown(
-            """
-            <style>
-            [data-testid="stAppViewContainer"] {
-                background-color: #000000;
-            }
-            </style>
-            """,
-            unsafe_allow_html=True
-        )
-        def carregar_dados():
-            query = """
-            SELECT v.*, e.empresa_nome, a.aeroporto_regiao, cp.passageiros_pagos, cp.bagagem_kg 
-            FROM voo v
-            JOIN empresa e ON v.empresa_sigla = e.empresa_sigla
-            JOIN aeroporto a ON v.aeroporto_origem_sigla = a.aeroporto_sigla
-            JOIN carga_passageiros cp ON v.voo_id = cp.voo_id
-            """
-            df = pd.read_sql_query(query, conn)
-            return df
-
-        df = carregar_dados()
-
-        tab1, tab2 = st.tabs(["Análise por Empresa", "Distribuição por Região"])
-        with tab1:
-            st.title("Análise de Voos Com poucos Passageiros & Bagagem")
-            st.write("Selecione uma empresa para visualizar os dados.")
-
-            empresas_disponiveis = df["empresa_nome"].unique()
-            empresa_selecionada = st.selectbox("Escolha uma empresa:", empresas_disponiveis)
-
-            df_filtrado = df[df["empresa_nome"] == empresa_selecionada]
-
-            st.bar_chart(df_filtrado[["bagagem_kg","passageiros_pagos" ]])
-
-            filtro_improdutivo_passageiros = df_filtrado[df_filtrado["passageiros_pagos"] < 10] 
-            st.write("Voos com baixo número de passageiros pagos:")
-            st.dataframe(filtro_improdutivo_passageiros)
-
-            filtro_improdutivo_bagagem = df_filtrado[df_filtrado["bagagem_kg"] > 2000]  
-            st.write("Voos com muita bagagem transportada com poucos passageiros):")
-            st.dataframe(filtro_improdutivo_bagagem)
-
-            total_voos = len(df_filtrado)
-            total_improdutivos_passageiros = len(filtro_improdutivo_passageiros)
-            total_improdutivos_bagagem = len(filtro_improdutivo_bagagem)
-
-            percentual_improdutivo_passageiros = (total_improdutivos_passageiros / total_voos) * 100 if total_voos > 0 else 0
-            percentual_improdutivo_bagagem = (total_improdutivos_bagagem / total_voos) * 100 if total_voos > 0 else 0
-
-            st.subheader(f"**Percentual de voos com poucos passageiros:** {percentual_improdutivo_passageiros:.2f}%")
-            st.subheader(f"**Percentual de voos com poucos passageiros e muita bagagem:** {percentual_improdutivo_bagagem:.2f}%")
-
-
-        with tab2:
-            st.title("Distribuição de Voos Improdutivos por Região")
-            
-            regioes_improdutivas_passageiros = filtro_improdutivo_passageiros["aeroporto_regiao"].value_counts()
-            regioes_improdutivas_bagagem = filtro_improdutivo_bagagem["aeroporto_regiao"].value_counts()
-
-            st.write("Distribuição de voos improdutivos por passageiros:")
-            st.bar_chart(regioes_improdutivas_passageiros)
-
-            st.write("Distribuição de voos improdutivos por bagagem:")
-            st.bar_chart(regioes_improdutivas_bagagem)
-if st.session_state.aba_ativa == 'rotas':
-    st.markdown(
-        """
-        <style>
-        [data-testid="stAppViewContainer"] {
-            background-color: #000000;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True
-    )
-    query = '''
+    def consulta_carga_passageiros_por_empresa(empresa_sigla=None):
+        query = '''
         SELECT 
+            c.voo_id, 
+            c.passageiros_pagos, 
+            c.passageiros_gratis, 
+            c.bagagem_kg, 
+            c.carga_paga_kg, 
+            c.carga_gratis_kg, 
+            c.correio_kg,
+            c.carga_paga_km,
+            c.carga_gratis_km,
+            v.ano, 
+            v.mes,
             v.empresa_sigla,
-            e.empresa_nome,
-            SUM(v.distancia_voada_km) AS total_km,
-            SUM(v.combustivel_litros) AS total_combustivel
-        FROM voo v
-        JOIN empresa e ON v.empresa_sigla = e.empresa_sigla
-        GROUP BY v.empresa_sigla
-        HAVING total_combustivel > 0
+            v.aeroporto_origem_sigla,
+            v.aeroporto_destino_sigla
+        FROM carga_passageiros c
+        JOIN voo v ON c.voo_id = v.voo_id
         '''
+        
+        if empresa_sigla:
+            query += f" WHERE v.empresa_sigla = '{empresa_sigla}'"
+
+        return pd.read_sql(query, conn)
+
+    # Função para calcular totais
+    def calcula_totais(df):
+        totais = {
+            'total_passageiros_pagos': df['passageiros_pagos'].sum(),
+            'total_passageiros_gratis': df['passageiros_gratis'].sum(),
+            'total_bagagem': df['bagagem_kg'].sum(),
+            'total_carga_paga': df['carga_paga_kg'].sum(),
+            'total_carga_gratis': df['carga_gratis_kg'].sum(),
+            'total_correio': df['correio_kg'].sum(),
+        }
+        return totais
+
+    # Carregar todas as empresas para o filtro
+    def carregar_empresas():
+        query = "SELECT empresa_sigla, empresa_nome FROM empresa"
+        return pd.read_sql(query, conn)
+
+    def filtrar_voos_com_50_porcento_gratis(df):
+        df['percentual_gratis'] = df['passageiros_gratis'] / (df['passageiros_pagos'] + df['passageiros_gratis']) * 100
+        return df[df['percentual_gratis'] >= 50]
+
+    # Carregar dados de empresas
+    empresas = carregar_empresas()
+
+    # Adicionar a opção 'Todos' ao filtro de seleção
+    todos_empresa = pd.DataFrame({'empresa_sigla': ['todos'], 'empresa_nome': ['Todos']})
+    empresas_com_todos = pd.concat([empresas, todos_empresa], ignore_index=True)
+
+    # Adicionar filtro de seleção para a empresa
+    empresa_selecionada = st.selectbox(
+        "Selecione a empresa",
+        empresas_com_todos['empresa_nome'].tolist()
+    )
+
+    # Obter a sigla da empresa selecionada
+    if empresa_selecionada == 'Todos':
+        empresa_sigla_selecionada = None
+    else:
+        empresa_sigla_selecionada = empresas_com_todos[empresas_com_todos['empresa_nome'] == empresa_selecionada]['empresa_sigla'].values[0]
+
+    # Carregar dados filtrados de carga e passageiros para a empresa selecionada
+    df_carga_passageiros = consulta_carga_passageiros_por_empresa(empresa_sigla_selecionada)
+
+    # Exibir totais de passageiros e carga
+    totais = calcula_totais(df_carga_passageiros)
+
+    # Iniciar a aplicação Streamlit
+    st.title('Análise de Passageiros e Carga por Empresa')
+
+    # Exibir os dados na mesma linha usando colunas
+    if empresa_selecionada == 'Todos':
+        st.subheader(f'Totais de Passageiros e Carga para todas as empresas')
+    else:
+        st.subheader(f'Totais de Passageiros e Carga para a empresa: {empresa_selecionada}')
+
+    # Criar 6 colunas para exibir os dados na mesma linha
+    col1, col2, col3, col4, col5, col6 = st.columns(6)
+
+    with col1:
+        st.metric(label="Passageiros Pagos", value=f"{totais['total_passageiros_pagos']:,}")
+        
+    with col2:
+        st.metric(label="Passageiros Grátis", value=f"{totais['total_passageiros_gratis']:,}")
+
+    with col3:
+        st.metric(label="Bagagem (kg)", value=f"{totais['total_bagagem']:,}")
+
+    with col4:
+        st.metric(label="Carga Paga (kg)", value=f"{totais['total_carga_paga']:,}")
+
+    with col5:
+        st.metric(label="Carga Grátis (kg)", value=f"{totais['total_carga_gratis']:,}")
+
+    with col6:
+        st.metric(label="Correio (kg)", value=f"{totais['total_correio']:,}")
+
+    if empresa_selecionada == 'Todos':
+        st.subheader("Distribuição de Passageiros e Carga - Todas as Empresas")
+    else:
+        st.subheader(f"Distribuição de Passageiros e Carga - Empresa: {empresa_selecionada}")
+
+    # Gráfico de distribuição dos passageiros
+    fig_passageiros = px.bar(
+        df_carga_passageiros,
+        x=["passageiros_pagos", "passageiros_gratis"],
+        title="Distribuição de Passageiros Pagos e Grátis",
+        labels={"value": "Quantidade", "variable": "Tipo de Passageiro"},
+        barmode="stack",
+    )
+    st.plotly_chart(fig_passageiros)
+
+    # Gráfico de distribuição de bagagem e carga
+    fig_carga_bagagem = px.bar(
+        df_carga_passageiros,
+        x=["bagagem_kg", "carga_paga_kg", "carga_gratis_kg", "correio_kg"],
+        title="Distribuição de Bagagem, Carga Paga, Carga Grátis e Correio",
+        labels={"value": "Peso (kg)", "variable": "Tipo de Carga"},
+        barmode="stack",
+    )
+    st.plotly_chart(fig_carga_bagagem)
+    
+
+
+    st.subheader('Detalhes dos Voos com 50% ou Mais de Passageiros Grátis')
+    
+    # Filtrar voos com 50% ou mais de passageiros grátis
+    df_50_gratis = filtrar_voos_com_50_porcento_gratis(df_carga_passageiros)
+    
+    # Exibir dados filtrados
+    st.write("Voos com 50% ou mais de passageiros grátis:")
+    st.dataframe(df_50_gratis[['ano', 'mes', 'empresa_sigla', 'aeroporto_origem_sigla', 'aeroporto_destino_sigla', 'passageiros_pagos', 'passageiros_gratis', 'percentual_gratis']])
+
+
+if st.session_state.aba_ativa == 'rotas':
+    st.title("Rotas")
+    conn = sqlite3.connect("dados_voo.db")
+
+    query = '''
+    SELECT 
+        vo.aeroporto_origem_sigla,
+        ao.aeroporto_nome AS aeroporto_origem_nome,
+        vo.aeroporto_destino_sigla,
+        ad.aeroporto_nome AS aeroporto_destino_nome,
+        COUNT(*) AS total_voos
+    FROM voo vo
+    JOIN aeroporto ao ON vo.aeroporto_origem_sigla = ao.aeroporto_sigla
+    JOIN aeroporto ad ON vo.aeroporto_destino_sigla = ad.aeroporto_sigla
+    GROUP BY vo.aeroporto_origem_sigla, vo.aeroporto_destino_sigla
+    ORDER BY total_voos DESC
+    LIMIT 200
+    '''
 
     df = pd.read_sql_query(query, conn)
 
-    # Calcular eficiência
-    df['eficiencia_km_por_litro'] = df['total_km'] / df['total_combustivel']
+    st.title("✈️ Principais Rotas de Voo")
 
-    # Eficiência média geral
-    media_eficiencia = df['eficiencia_km_por_litro'].mean()
+    total_voos_top_200 = df["total_voos"].sum()
 
-    # Top 3 empresas
-    top3 = df.sort_values(by='eficiencia_km_por_litro', ascending=False).head(3)
-    botton3 = df.sort_values(by='eficiencia_km_por_litro', ascending=False).tail(3)
-    # Layout no Streamlit
-    st.title("⛽ Eficiência de Combustível das Empresas Aéreas")
-    st.metric(label="Média Geral de Eficiência (km/l)", value=f"{media_eficiencia:.2f}")
+    rota_mais_movimentada = df.iloc[0]
+    rota_mais_sigla = f"{rota_mais_movimentada['aeroporto_origem_sigla']} → {rota_mais_movimentada['aeroporto_destino_sigla']}"
+    rota_mais_nome = f"{rota_mais_movimentada['aeroporto_origem_nome']} → {rota_mais_movimentada['aeroporto_destino_nome']}"
+    rota_mais_voos = rota_mais_movimentada["total_voos"]
 
-    st.subheader("Top 3 Empresas em Eficiência")
+    num_rotas = df.shape[0]
+
     col1, col2, col3 = st.columns(3)
-    col1.metric(label=top3.iloc[0]['empresa_nome'], value=f"{top3.iloc[0]['eficiencia_km_por_litro']:.2f} km/l")
-    col2.metric(label=top3.iloc[1]['empresa_nome'], value=f"{top3.iloc[1]['eficiencia_km_por_litro']:.2f} km/l")
-    col3.metric(label=top3.iloc[2]['empresa_nome'], value=f"{top3.iloc[2]['eficiencia_km_por_litro']:.2f} km/l")
 
-    st.subheader("Top 3 Empresas com menos Eficiência")
-    col1, col2, col3 = st.columns(3)
-    col1.metric(label=botton3.iloc[0]['empresa_nome'], value=f"{botton3.iloc[0]['eficiencia_km_por_litro']:.2f} km/l")
-    col2.metric(label=botton3.iloc[1]['empresa_nome'], value=f"{botton3.iloc[1]['eficiencia_km_por_litro']:.2f} km/l")
-    col3.metric(label=botton3.iloc[2]['empresa_nome'], value=f"{botton3.iloc[2]['eficiencia_km_por_litro']:.2f} km/l")
+    with col1:
+        st.metric("🔥 Rota Mais Movimentada", f"{rota_mais_sigla}", delta=f"{rota_mais_voos:,} voos")
+        st.text(rota_mais_nome)
 
-    st.subheader("Média Geral de Eficiência")
-    st.metric(label="Média Geral (km/l)", value=f"{media_eficiencia:.2f}")
+    with col2:
+        st.metric("📍 Rotas Apresentadas", num_rotas)
 
-conn.close()
+    with col3:
+        st.metric("✈️ Total de Voos (Top 200 Rotas)", f"{total_voos_top_200:,}")
+
+
+    localizacoes_aeroportos = {
+        "SBCT": {"nome": "Curitiba", "latitude": -25.5285, "longitude": -49.1758},
+        "SBKP": {"nome": "Campinas", "latitude": -23.0074, "longitude": -47.1344},
+        "SBGR": {"nome": "São Paulo", "latitude": -23.4319, "longitude": -46.4679},
+        "SAEZ": {"nome": "Buenos Aires", "latitude": -34.8222, "longitude": -58.5358},
+        "KMIA": {"nome": "Miami", "latitude": 25.7959, "longitude": -80.2870},
+        "SBEG": {"nome": "Manaus", "latitude": -3.0386, "longitude": -60.0497},
+        "SCEL": {"nome": "Santiago", "latitude": -33.3930, "longitude": -70.7858},
+        "SBCF": {"nome": "Belo Horizonte", "latitude": -19.6244, "longitude": -43.9719},
+        "SBRF": {"nome": "Recife", "latitude": -8.1265, "longitude": -34.9233},
+        "SBBR": {"nome": "Brasília", "latitude": -15.8692, "longitude": -47.9208},
+        "SEQM": {"nome": "Quito", "latitude": -0.1279, "longitude": -78.3575},
+        "SBPA": {"nome": "Porto Alegre", "latitude": -29.9944, "longitude": -51.1714},
+        "SBFL": {"nome": "Florianópolis", "latitude": -27.6702, "longitude": -48.5525},
+        "SBSV": {"nome": "Salvador", "latitude": -12.9086, "longitude": -38.3225},
+        "SBPS": {"nome": "Porto Seguro", "latitude": -16.4386, "longitude": -39.0808},
+        "SUMU": {"nome": "Montevidéu", "latitude": -34.8384, "longitude": -56.0308},
+        "SBBE": {"nome": "Belém", "latitude": -1.3793, "longitude": -48.4763},
+        "SBFN": {"nome": "Fernando de Noronha", "latitude": -3.8549, "longitude": -32.4232},
+        "SBVT": {"nome": "Vitória", "latitude": -20.2581, "longitude": -40.2864},
+        "SGAS": {"nome": "Assunção", "latitude": -25.2396, "longitude": -57.5191},
+        "SPJC": {"nome": "Lima", "latitude": -12.0219, "longitude": -77.1143},
+        "SBSP": {"nome": "Congonhas", "latitude": -23.6267, "longitude": -46.6564},
+        "SBMQ": {"nome": "Macapá", "latitude": 0.0506, "longitude": -51.0722},
+        "KJFK": {"nome": "Nova York - JFK", "latitude": 40.6413, "longitude": -73.7781},
+        "SBMO": {"nome": "Maceió - Zumbi dos Palmares", "latitude": -9.5106, "longitude": -35.7917},
+        "SBCY": {"nome": "Cuiabá", "latitude": -15.6529, "longitude": -56.1167},
+        "SBJP": {"nome": "João Pessoa", "latitude": -7.1458, "longitude": -34.9509},
+        "SBRP": {"nome": "Ribeirão Preto", "latitude": -21.1364, "longitude": -47.7767},
+        "SGES": {"nome": "Encarnación", "latitude": -27.2272, "longitude": -55.8375},
+        "SBGO": {"nome": "Goiânia", "latitude": -16.6319, "longitude": -49.2262},
+        "DNMM": {"nome": "Lagos, Nigéria", "latitude": 6.5774, "longitude": 3.3219},
+        "EDDF": {"nome": "Frankfurt", "latitude": 50.0333, "longitude": 8.5706},
+        "LPPT": {"nome": "Lisboa", "latitude": 38.7813, "longitude": -9.1359}
+    }
+
+    rotas_voo = [
+    ("EDDF", "SBGR", 13), ("LPPT", "SBGR", 13), ("DNMM", "SBGR", 14),
+    ("KJFK", "SBGR", 17), ("SBKP", "SUMU", 17), ("SBMQ", "SBBE", 17),
+    ("SBPA", "SBKP", 17), ("SBRF", "SBSV", 17), ("SBSG", "SBBR", 17),
+    ("SBSP", "SBGL", 17), ("SBSV", "SBKP", 17), ("SUMU", "SBGR", 17),
+    ("SUMU", "SCEL", 17), ("KMIA", "SGAS", 18), ("SAEZ", "SBFL", 18),
+    ("SBCF", "SBKP", 18), ("SBFL", "SBCT", 18), ("SBFL", "SBSP", 18),
+    ("SBFZ", "SBRF", 18), ("SBGL", "SBSP", 18), ("SBRF", "SBGL", 18),
+    ("SBRF", "SBKP", 18), ("SBSP", "SBRJ", 18), ("SBGR", "SBCF", 30),
+    ("SBGR", "SBRF", 30), ("SBKP", "SBCT", 31), ("SBGR", "SBGL", 31),
+    ("SBBR", "SBKP", 31), ("SBKP", "SEQM", 32), ("SBCF", "SBGR", 32),
+    ("SBRF", "SBGR", 33), ("SAEZ", "SBGR", 34), ("SBGL", "SBKP", 36),
+    ("SBGL", "SBGR", 38), ("SCEL", "SBGR", 38), ("KMIA", "SBEG", 38),
+    ("SBKP", "SBGR", 39), ("SBGR", "SCEL", 41), ("SBGL", "SAEZ", 41),
+    ("KMIA", "SBKP", 41), ("SBGR", "SAEZ", 43), ("SBCT", "SBKP", 43)
+]
+
+
+    def definir_cor_voo(num_voos):
+        if num_voos <= 10:
+            return "blue"
+        elif num_voos <= 20:
+            return "green"
+        elif num_voos <= 30:
+            return "orange"
+        elif num_voos <= 40:
+            return "purple"
+        else:
+            return "red"
+
+    m = folium.Map(location=[-15.7801, -47.9292], zoom_start=5)
+    for codigo, dados in localizacoes_aeroportos.items():
+        folium.Marker(
+            location=[dados["latitude"], dados["longitude"]],
+            popup=f"{dados['nome']} ({codigo})",
+            tooltip=codigo,
+            icon=folium.Icon(color="blue", icon="plane")
+        ).add_to(m)
+    for origem, destino, num_voos in rotas_voo:
+        if origem in localizacoes_aeroportos and destino in localizacoes_aeroportos:
+            origem_coords = [localizacoes_aeroportos[origem]["latitude"], localizacoes_aeroportos[origem]["longitude"]]
+            destino_coords = [localizacoes_aeroportos[destino]["latitude"], localizacoes_aeroportos[destino]["longitude"]]
+            
+            folium.PolyLine(
+                [origem_coords, destino_coords],
+                color=definir_cor_voo(num_voos),
+                opacity=0.8,
+                tooltip=f"{origem} → {destino}: {num_voos} voos"
+            ).add_to(m)
+
+    st.markdown("<h1 style='text-align: center;'>Mapa de Rotas Aéreas</h1>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center;'>Este mapa exibe os principais aeroportos e suas conexões de voo, com cor e espessura proporcional ao número de voos.</p>", unsafe_allow_html=True)
+
+    st.markdown("<div style='display: flex; justify-content: center;'>", unsafe_allow_html=True)
+    folium_static(m)
+    st.markdown("</div>", unsafe_allow_html=True)
+
+
+
+    st.markdown("""
+    ### Legenda das Cores das Rotas:
+    🔴 **Vermelho**: 41+ voos  
+    🟣 **Roxo**: 31-40 voos  
+    🟠 **Laranja**: 21-30 voos  
+    🟢 **Verde**: 11-20 voos  
+    🔵 **Azul**: 0-10 voos  
+    """)
+
+
+
+
+    df = pd.read_sql_query(query, conn)
+
+    st.subheader("📉 Gráfico de Rotas por Total de Voos")
+
+    df['rota_nome'] = df['aeroporto_origem_nome'] + " → " + df['aeroporto_destino_nome']
+
+    fig_bar = px.bar(
+        df.sort_values("total_voos", ascending=True),
+        x="total_voos",
+        y="rota_nome",
+        orientation="h",
+        labels={"total_voos": "Total de Voos", "rota_nome": "Rota"},
+        height=800,
+        title="Top Rotas com Maior Volume de Voos"
+    )
+    st.plotly_chart(fig_bar, use_container_width=True)
+
+    st.subheader("🔁 Fluxo entre Regiões (Sankey)")
+
+    region_query = '''
+    SELECT 
+        vo.aeroporto_origem_sigla,
+        ao.aeroporto_regiao AS regiao_origem,
+        vo.aeroporto_destino_sigla,
+        ad.aeroporto_regiao AS regiao_destino,
+        COUNT(*) AS total_voos
+    FROM voo vo
+    JOIN aeroporto ao ON vo.aeroporto_origem_sigla = ao.aeroporto_sigla
+    JOIN aeroporto ad ON vo.aeroporto_destino_sigla = ad.aeroporto_sigla
+    GROUP BY regiao_origem, regiao_destino
+    ORDER BY total_voos DESC
+    '''
+    df_regioes = pd.read_sql_query(region_query, conn)
+
+    nodes = list(set(df_regioes['regiao_origem']).union(set(df_regioes['regiao_destino'])))
+    nodes = [r for r in nodes if r]  
+
+    node_dict = {name: i for i, name in enumerate(nodes)}
+    source = df_regioes['regiao_origem'].map(node_dict)
+    target = df_regioes['regiao_destino'].map(node_dict)
+    value = df_regioes['total_voos']
+
+    import plotly.graph_objects as go
+    fig_sankey = go.Figure(data=[go.Sankey(
+        node=dict(
+            pad=15,
+            thickness=20,
+            label=nodes,
+            color="blue"
+        ),
+        link=dict(
+            source=source,
+            target=target,
+            value=value
+        ))])
+    fig_sankey.update_layout(title_text="Fluxo de Voos entre Regiões", font_size=12)
+    st.plotly_chart(fig_sankey, use_container_width=True)
+    st.markdown("""
+    ### ℹ️ Legenda do Gráfico Sankey: Fluxo de Voos entre Regiões
+    - **Cada bloco (nó)** representa uma **região**.
+    - **Setas** mostram os voos **de uma região para outra**.
+    - **Espessura das setas** = quantidade de voos.
+    - Ex: fluxo grosso de *Sudeste → Nordeste* = muitos voos nessa rota.
+    """)
