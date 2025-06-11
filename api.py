@@ -125,6 +125,33 @@ def create_big_number_card(title, value, subtitle=""):
     """, unsafe_allow_html=True)
 
 if st.session_state.aba_ativa == 'home':
+    def criar_selectbox_empresa(label, key, conn):
+        """
+        Cria um selectbox com nomes de empresas formatados e retorna a sigla selecionada
+        """
+        empresas_query = """
+        SELECT DISTINCT e.empresa_sigla, e.empresa_nome 
+        FROM voo v 
+        JOIN empresa e ON v.empresa_sigla = e.empresa_sigla 
+        ORDER BY e.empresa_nome
+        """
+        empresas_df = pd.read_sql_query(empresas_query, conn)
+        
+        # Criar dicionário para mapear display -> sigla
+        empresa_map = {'Todas': 'Todas'}
+        opcoes_display = ['Todas']
+        
+        for _, row in empresas_df.iterrows():
+            display_name = f"{row['empresa_nome']} ({row['empresa_sigla']})"
+            empresa_map[display_name] = row['empresa_sigla']
+            opcoes_display.append(display_name)
+        
+        # Selectbox
+        selecionada_display = st.selectbox(label, opcoes_display, key=key)
+        
+        # Retornar sigla
+        return empresa_map[selecionada_display]
+    
     # Aplicar CSS customizado apenas na home
     st.markdown(home_css, unsafe_allow_html=True)
     
@@ -240,37 +267,29 @@ if st.session_state.aba_ativa == 'home':
     df_comparacao = pd.concat([df_nacional, df_internacional], ignore_index=True)
 
     col1, col2 = st.columns(2)
+    col1, col2 = st.columns(2)
+    col1, col2 = st.columns(2)
     with col1:
         st.markdown("""
-        <div style='background-color: white; padding: 2rem; border-radius: 0.75rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); margin: 1rem 0;'>
-            <h3 style='color: #1e40af; text-align: center; margin-bottom: 1.5rem; font-size: 1.5rem;'>🇧🇷 Voos Nacionais</h3>
+        <div style='background-color: white; padding: 1rem; border-radius: 0.75rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); margin: 0.5rem 0;'>
+            <h3 style='color: #1e40af; text-align: center; margin-bottom: 0.8rem; font-size: 1.2rem;'>🇧🇷 Voos Nacionais</h3>
         """, unsafe_allow_html=True)
         if not df_nacional.empty:
             st.metric("Total Voos", f"{int(df_nacional['total_voos'].iloc[0]):,}")
-            st.metric("Passageiros Pagos", f"{int(df_nacional['total_passageiros_pagos'].iloc[0]):,}")
-            st.metric("Distância Total (km)", f"{df_nacional['total_distancia_km'].iloc[0]:,.0f}")
+            st.metric("Passageiros", f"{int(df_nacional['total_passageiros_pagos'].iloc[0]):,}")
+            st.metric("Distância (km)", f"{df_nacional['total_distancia_km'].iloc[0]:,.0f}")
         st.markdown("</div>", unsafe_allow_html=True)
 
     with col2:
         st.markdown("""
-        <div style='background-color: white; padding: 2rem; border-radius: 0.75rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); margin: 1rem 0;'>
-            <h3 style='color: #1e40af; text-align: center; margin-bottom: 1.5rem; font-size: 1.5rem;'>🌐 Voos Internacionais</h3>
+        <div style='background-color: white; padding: 1rem; border-radius: 0.75rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); margin: 0.5rem 0;'>
+            <h3 style='color: #1e40af; text-align: center; margin-bottom: 0.8rem; font-size: 1.2rem;'>🌐 Voos Internacionais</h3>
         """, unsafe_allow_html=True)
         if not df_internacional.empty:
             st.metric("Total Voos", f"{int(df_internacional['total_voos'].iloc[0]):,}")
-            st.metric("Passageiros Pagos", f"{int(df_internacional['total_passageiros_pagos'].iloc[0]):,}")
-            st.metric("Distância Total (km)", f"{df_internacional['total_distancia_km'].iloc[0]:,.0f}")
+            st.metric("Passageiros", f"{int(df_internacional['total_passageiros_pagos'].iloc[0]):,}")
+            st.metric("Distância (km)", f"{df_internacional['total_distancia_km'].iloc[0]:,.0f}")
         st.markdown("</div>", unsafe_allow_html=True)
-
-    st.markdown("#### 📋 Tabela Comparativa")
-    df_comparacao_display = df_comparacao.copy()
-    df_comparacao_display.columns = [
-        'Tipo de Voo', 'Total Voos', 'Total Decolagens', 'Distância Total (km)',
-        'Combustível Total (L)', 'Horas Voadas', 'Passageiros Pagos', 
-        'Passageiros Grátis', 'Média Distância (km)', 'Média Combustível (L)'
-    ]
-    st.dataframe(df_comparacao_display, use_container_width=True)
-
     # Gráficos principais com plotly
     st.markdown("---")
     st.markdown("### 📈 Análises Visuais")
@@ -382,13 +401,7 @@ if st.session_state.aba_ativa == 'home':
     df_empresas = pd.read_sql_query(query_empresas, conn)
 
     if not df_empresas.empty:
-        st.markdown("#### 🏆 Top Empresas por Número de Voos")
-        top_10_voos = df_empresas.head(10)
-        fig_voos = plt.figure(figsize=(12, 8))
-        plt.barh(top_10_voos['empresa_sigla'], top_10_voos['total_voos'], color="#00BFFF")
-        plt.gca().invert_yaxis()
-        plt.title("Top 10 Empresas por Voos")
-        st.pyplot(fig_voos)
+        
 
         st.markdown("#### 📊 Tabela Resumo")
         df_display = df_empresas.copy()
@@ -405,98 +418,114 @@ if st.session_state.aba_ativa == 'home':
     else:
         st.warning("⚠️ Nenhum dado encontrado para os filtros selecionados.")
 
-    # --- Nova seção: Total de Decolagens por Mês ---
-    st.markdown("### 🛫 Total de Decolagens por Mês")
+    # # --- Nova seção: Total de Decolagens por Mês ---
+    # st.markdown("### 🛫 Total de Decolagens por Mês")
     
-    # Filtros para decolagens
-    col_filtro1, col_filtro2 = st.columns(2)
+    # # Filtros para decolagens
+    # col_filtro1, col_filtro2 = st.columns(2)
     
-    with col_filtro1:
-        empresas_disponiveis = pd.read_sql_query("SELECT DISTINCT empresa_sigla FROM voo ORDER BY empresa_sigla", conn)['empresa_sigla'].tolist()
-        empresa_selecionada = st.selectbox("Empresa:", ['Todas'] + empresas_disponiveis, key="empresa_decolagem")
     
-    with col_filtro2:
-        tipos_voo = ['Todos', 'DOMESTICA', 'INTERNACIONAL']
-        tipo_voo_selecionado = st.selectbox("Tipo de Voo:", tipos_voo, key="tipo_voo_decolagem")
+    # with col_filtro1:
+    #     # Buscar empresas para o selectbox
+    #     empresas_query = """
+    #     SELECT DISTINCT e.empresa_sigla, e.empresa_nome 
+    #     FROM voo v 
+    #     JOIN empresa e ON v.empresa_sigla = e.empresa_sigla 
+    #     ORDER BY e.empresa_nome
+    #     """
+    #     empresas_df = pd.read_sql_query(empresas_query, conn)
+    #     opcoes_empresas = ['Todas'] + [f"{row['empresa_nome']} ({row['empresa_sigla']})" for _, row in empresas_df.iterrows()]
+    #     empresa_selecionada_display = st.selectbox("Empresa:", opcoes_empresas, key="empresa_decolagem")
     
-    # Construir query para decolagens
-    where_conditions_dec = []
-    if empresa_selecionada != 'Todas':
-        where_conditions_dec.append(f"v.empresa_sigla = '{empresa_selecionada}'")
-    if tipo_voo_selecionado != 'Todos':
-        where_conditions_dec.append(f"v.natureza = '{tipo_voo_selecionado}'")
+    # # Extrair a sigla selecionada para usar nas queries
+    # if empresa_selecionada_display != 'Todas':
+    #     # Extrair sigla entre parênteses
+    #     empresa_selecionada = empresa_selecionada_display.split('(')[1].replace(')', '')
+    # else:
+    #     empresa_selecionada = 'Todas'
     
-    where_clause_dec = "WHERE " + " AND ".join(where_conditions_dec) if where_conditions_dec else ""
+    # with col_filtro2:
+    #     tipos_voo = ['Todos', 'DOMÉSTICA', 'INTERNACIONAL']
+    #     tipo_voo_selecionado = st.selectbox("Tipo de Voo:", tipos_voo, key="tipo_voo_decolagem")
     
-    query_decolagens = f"""
-    SELECT 
-        v.ano,
-        v.mes,
-        SUM(v.decolagens) as total_decolagens,
-        COUNT(*) as total_voos,
-        AVG(v.decolagens) as media_decolagens_por_voo
-    FROM voo v
-    {where_clause_dec}
-    GROUP BY v.ano, v.mes
-    ORDER BY v.ano, v.mes
-    """
+    # # Construir query para decolagens
+    # where_conditions_dec = []
+    # if empresa_selecionada != 'Todas':
+    #     where_conditions_dec.append(f"v.empresa_sigla = '{empresa_selecionada}'")
+    # if tipo_voo_selecionado != 'Todos':
+    #     where_conditions_dec.append(f"v.natureza = '{tipo_voo_selecionado}'")
     
-    df_decolagens = pd.read_sql_query(query_decolagens, conn)
+    # where_clause_dec = "WHERE " + " AND ".join(where_conditions_dec) if where_conditions_dec else ""
     
-    if not df_decolagens.empty:
-        # Gráfico de linha temporal para decolagens
-        col1, col2 = st.columns([3, 1])
+    # query_decolagens = f"""
+    # SELECT 
+    #     v.ano,
+    #     v.mes,
+    #     SUM(v.decolagens) as total_decolagens,
+    #     COUNT(*) as total_voos,
+    #     AVG(v.decolagens) as media_decolagens_por_voo
+    # FROM voo v
+    # {where_clause_dec}
+    # GROUP BY v.ano, v.mes
+    # ORDER BY v.ano, v.mes
+    # """
+    
+    # df_decolagens = pd.read_sql_query(query_decolagens, conn)
+    
+    # if not df_decolagens.empty:
+    #     # Gráfico de linha temporal para decolagens
+    #     col1, col2 = st.columns([3, 1])
         
-        with col1:
-            fig_decolagens = plt.figure(figsize=(14, 6))
+    #     with col1:
+    #         fig_decolagens = plt.figure(figsize=(14, 6))
             
-            # Criar labels para o eixo X (sem usar pd.to_datetime)
-            df_decolagens['mes_ano_label'] = df_decolagens['mes'].astype(str).str.zfill(2) + '/' + df_decolagens['ano'].astype(str)
+    #         # Criar labels para o eixo X (sem usar pd.to_datetime)
+    #         df_decolagens['mes_ano_label'] = df_decolagens['mes'].astype(str).str.zfill(2) + '/' + df_decolagens['ano'].astype(str)
             
-            # Usar range numérico para o eixo X
-            x_values = range(len(df_decolagens))
+    #         # Usar range numérico para o eixo X
+    #         x_values = range(len(df_decolagens))
             
-            plt.plot(x_values, df_decolagens['total_decolagens'], 
-                    marker='o', linewidth=2, markersize=6, color='#FF6B6B')
-            plt.title('Evolução das Decolagens por Mês', fontsize=14, fontweight='bold')
-            plt.xlabel('Mês/Ano')
-            plt.ylabel('Total de Decolagens')
-            plt.grid(True, alpha=0.3)
+    #         plt.plot(x_values, df_decolagens['total_decolagens'], 
+    #                 marker='o', linewidth=2, markersize=6, color='#FF6B6B')
+    #         plt.title('Evolução das Decolagens por Mês', fontsize=14, fontweight='bold')
+    #         plt.xlabel('Mês/Ano')
+    #         plt.ylabel('Total de Decolagens')
+    #         plt.grid(True, alpha=0.3)
             
-            # Configurar labels do eixo X
-            plt.xticks(x_values, df_decolagens['mes_ano_label'], rotation=45)
+    #         # Configurar labels do eixo X
+    #         plt.xticks(x_values, df_decolagens['mes_ano_label'], rotation=45)
             
-            # Adicionar valores nos pontos
-            for i, (idx, row) in enumerate(df_decolagens.iterrows()):
-                plt.annotate(f"{int(row['total_decolagens']):,}", 
-                           (i, row['total_decolagens']),
-                           textcoords="offset points", xytext=(0,10), ha='center', fontsize=8)
+    #         # Adicionar valores nos pontos
+    #         for i, (idx, row) in enumerate(df_decolagens.iterrows()):
+    #             plt.annotate(f"{int(row['total_decolagens']):,}", 
+    #                        (i, row['total_decolagens']),
+    #                        textcoords="offset points", xytext=(0,10), ha='center', fontsize=8)
             
-            plt.tight_layout()
-            st.pyplot(fig_decolagens)
+    #         plt.tight_layout()
+    #         st.pyplot(fig_decolagens)
         
-        with col2:
-            st.markdown("**Resumo Decolagens:**")
-            total_decolagens_periodo = df_decolagens['total_decolagens'].sum()
-            media_mensal = df_decolagens['total_decolagens'].mean()
-            mes_maior = df_decolagens.loc[df_decolagens['total_decolagens'].idxmax()]
+    #     with col2:
+    #         st.markdown("**Resumo Decolagens:**")
+    #         total_decolagens_periodo = df_decolagens['total_decolagens'].sum()
+    #         media_mensal = df_decolagens['total_decolagens'].mean()
+    #         mes_maior = df_decolagens.loc[df_decolagens['total_decolagens'].idxmax()]
             
-            st.metric("Total no Período", f"{int(total_decolagens_periodo):,}")
-            st.metric("Média Mensal", f"{int(media_mensal):,}")
-            st.write(f"**Pico:** {int(mes_maior['mes'])}/{int(mes_maior['ano'])}")
-            st.write(f"**Valor:** {int(mes_maior['total_decolagens']):,}")
+    #         st.metric("Total no Período", f"{int(total_decolagens_periodo):,}")
+    #         st.metric("Média Mensal", f"{int(media_mensal):,}")
+    #         st.write(f"**Pico:** {int(mes_maior['mes'])}/{int(mes_maior['ano'])}")
+    #         st.write(f"**Valor:** {int(mes_maior['total_decolagens']):,}")
         
-        # Tabela de decolagens
-        st.markdown("#### 📋 Tabela de Decolagens por Mês")
-        df_decolagens_display = df_decolagens[['ano', 'mes', 'total_decolagens', 'total_voos', 'media_decolagens_por_voo']].copy()
-        df_decolagens_display.columns = ['Ano', 'Mês', 'Total Decolagens', 'Total Voos', 'Média Decolagens/Voo']
-        df_decolagens_display['Total Decolagens'] = df_decolagens_display['Total Decolagens'].apply(lambda x: f"{int(x):,}")
-        df_decolagens_display['Total Voos'] = df_decolagens_display['Total Voos'].apply(lambda x: f"{int(x):,}")
-        df_decolagens_display['Média Decolagens/Voo'] = df_decolagens_display['Média Decolagens/Voo'].apply(lambda x: f"{x:.2f}")
+    #     # Tabela de decolagens
+    #     st.markdown("#### 📋 Tabela de Decolagens por Mês")
+    #     df_decolagens_display = df_decolagens[['ano', 'mes', 'total_decolagens', 'total_voos', 'media_decolagens_por_voo']].copy()
+    #     df_decolagens_display.columns = ['Ano', 'Mês', 'Total Decolagens', 'Total Voos', 'Média Decolagens/Voo']
+    #     df_decolagens_display['Total Decolagens'] = df_decolagens_display['Total Decolagens'].apply(lambda x: f"{int(x):,}")
+    #     df_decolagens_display['Total Voos'] = df_decolagens_display['Total Voos'].apply(lambda x: f"{int(x):,}")
+    #     df_decolagens_display['Média Decolagens/Voo'] = df_decolagens_display['Média Decolagens/Voo'].apply(lambda x: f"{x:.2f}")
         
-        st.dataframe(df_decolagens_display, use_container_width=True)
-    else:
-        st.warning("⚠️ Nenhum dado de decolagens encontrado para os filtros selecionados.")
+    #     st.dataframe(df_decolagens_display, use_container_width=True)
+    # else:
+    #     st.warning("⚠️ Nenhum dado de decolagens encontrado para os filtros selecionados.")
 
     # --- Nova seção: Distância Total por Rota/Empresa ---
     st.markdown("### 🗺️ Distância Total Voada por Rota e Empresa")
@@ -505,11 +534,27 @@ if st.session_state.aba_ativa == 'home':
     col_filtro1, col_filtro2 = st.columns(2)
     
     with col_filtro1:
-        empresas_dist = pd.read_sql_query("SELECT DISTINCT empresa_sigla FROM voo ORDER BY empresa_sigla", conn)['empresa_sigla'].tolist()
-        empresa_selecionada_dist = st.selectbox("Empresa:", ['Todas'] + empresas_dist, key="empresa_distancia")
+        # Buscar empresas com nome e sigla para distância
+        empresas_dist_query = """
+        SELECT DISTINCT e.empresa_sigla, e.empresa_nome 
+        FROM voo v 
+        JOIN empresa e ON v.empresa_sigla = e.empresa_sigla 
+        ORDER BY e.empresa_nome
+        """
+        empresas_dist_df = pd.read_sql_query(empresas_dist_query, conn)
+        
+        # Criar lista de opções formatadas
+        opcoes_empresas_dist = ['Todas'] + [f"{row['empresa_nome']} ({row['empresa_sigla']})" for _, row in empresas_dist_df.iterrows()]
+        empresa_selecionada_dist_display = st.selectbox("Empresa:", opcoes_empresas_dist, key="empresa_distancia")
+        
+        # Extrair a sigla selecionada
+        if empresa_selecionada_dist_display != 'Todas':
+            empresa_selecionada_dist = empresa_selecionada_dist_display.split('(')[1].replace(')', '')
+        else:
+            empresa_selecionada_dist = 'Todas'
     
     with col_filtro2:
-        tipos_voo_dist = ['Todos', 'DOMESTICA', 'INTERNACIONAL']
+        tipos_voo_dist = ['Todos', 'DOMÉSTICA', 'INTERNACIONAL']
         tipo_voo_selecionado_dist = st.selectbox("Tipo de Voo:", tipos_voo_dist, key="tipo_voo_distancia")
     
     # Tabs para diferentes análises
@@ -566,7 +611,7 @@ if st.session_state.aba_ativa == 'home':
             fig_dist_empresa = plt.figure(figsize=(12, 6))
             bars = plt.barh(range(len(top_15_empresas)), 
                            top_15_empresas['distancia_total'], 
-                           color=['#FF6B6B' if nat == 'DOMESTICA' else '#4ECDC4' for nat in top_15_empresas['natureza']])
+                           color=['#FF6B6B' if nat == 'DOMÉSTICA' else '#4ECDC4' for nat in top_15_empresas['natureza']])
             
             plt.yticks(range(len(top_15_empresas)), 
                       [f"{row['empresa_sigla']}\n({row['natureza']})" for _, row in top_15_empresas.iterrows()])
@@ -666,7 +711,7 @@ if st.session_state.aba_ativa == 'home':
             fig_dist_rota = plt.figure(figsize=(12, 8))
             bars = plt.barh(range(len(top_20_rotas)), 
                            top_20_rotas['distancia_total'],
-                           color=['#FF6B6B' if nat == 'DOMESTICA' else '#4ECDC4' for nat in top_20_rotas['natureza']])
+                           color=['#FF6B6B' if nat == 'DOMÉSTICA' else '#4ECDC4' for nat in top_20_rotas['natureza']])
             
             plt.yticks(range(len(top_20_rotas)), 
                       [f"{row['rota']}\n({row['natureza']})" for _, row in top_20_rotas.iterrows()])
