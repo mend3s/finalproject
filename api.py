@@ -1,4 +1,3 @@
-
 import sqlite3
 import pandas as pd
 import streamlit as st
@@ -12,6 +11,7 @@ import folium
 import streamlit as st
 from streamlit_folium import st_folium
 from streamlit_folium import folium_static
+import streamlit_pills as stp
 
 
 conn = sqlite3.connect("dados_voo.db")
@@ -34,16 +34,19 @@ home_css = """
         padding: 1rem;
         border-radius: 0.5rem;
         box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+        text-align: center;
     }
     
     /* Big numbers styling */
     .metric-card {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #704DE6, #6648E6);;
         padding: 1.5rem;
         border-radius: 1rem;
         color: white;
         text-align: center;
         margin: 0.5rem 0;
+        border: 0.5px solid #764ba2;
+        align: center;
     }
     
     .metric-card h3 {
@@ -51,6 +54,7 @@ home_css = """
         font-size: 2.5rem;
         font-weight: bold;
         color: white;
+        align: center;
     }
     
     .metric-card p {
@@ -58,6 +62,7 @@ home_css = """
         font-size: 1rem;
         opacity: 0.9;
         color: white;
+        align: center;
     }
     
     /* Section headers */
@@ -72,7 +77,7 @@ home_css = """
     
     /* Chart containers */
     .chart-container {
-        background-color: white;
+        background-color: #f9f9f9;
         padding: 1.5rem;
         border-radius: 0.75rem;
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
@@ -87,32 +92,121 @@ home_css = """
 </style>
 """
 
-st.sidebar.title("📋Menu")
-st.sidebar.title("Categorias")
-st.markdown(
-    """
-    <style>
-    [data-testid="stSidebar"] {
-        background-color: #003366;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True
-)   
-     
-if 'aba_ativa' not in st.session_state:
-    st.session_state.aba_ativa = 'home'  # valor inicial padrão
-    st.session_state.aba_ativa = 'home'  
-    
-st.sidebar.button("📌 Análises Operacionais", on_click=lambda: st.session_state.update(aba_ativa='home'))
-st.sidebar.button("🔍 Painel de eficiência", on_click=lambda: st.session_state.update(aba_ativa='painel_eficiencia'))
-st.sidebar.button("⛽ Eficiencia Combustivel", on_click=lambda: st.session_state.update(aba_ativa='eficiencia_comb'))
-st.sidebar.button("📊 KPIs e Métricas Gerenciais", on_click=lambda: st.session_state.update(aba_ativa='kpis'))
-st.sidebar.button("🧑 Cliente", on_click=lambda: st.session_state.update(aba_ativa='cliente'))
-st.sidebar.button("🚫 Análise de Voos Improdutivos Combustivel", on_click=lambda: st.session_state.update(aba_ativa='voos_impro'))
-st.sidebar.button("🚫 Análise de Voos Improdutivos Passageiros/Bagagem", on_click=lambda: st.session_state.update(aba_ativa='voos_impro_pas'))
-st.sidebar.button("🌎 Rota e Geografia", on_click=lambda: st.session_state.update(aba_ativa='rotas'))
-st.sidebar.button("📦 Produtos", on_click=lambda: st.session_state.update(aba_ativa='produtos'))
+
+st.markdown("""
+<style>
+/* A classe principal para TODOS os cards */
+.custom-card {
+    /* Estrutura e Sombra */
+    background-color: white;
+    padding: 1.5rem;
+    border-radius: 0.75rem;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    margin: 0.5rem 0;
+
+    /* A MÁGICA DO ALINHAMENTO E TAMANHO */
+    display: flex;
+    flex-direction: column;
+    align-items: center;      /* Centraliza horizontalmente */
+    justify-content: center;    /* Centraliza verticalmente */
+    height: 100%;             /* Força a mesma altura para cards na mesma linha */
+    text-align: center;       /* Garante que o texto dentro dos elementos também seja centralizado */
+}
+
+/* Estilos para textos específicos dentro dos cards */
+.card-title {
+    color: #1e40af;
+    font-size: 1.2rem;
+    font-weight: bold;
+    margin-bottom: 1rem;
+}
+
+.card-rank {
+    color: #1e40af;
+    font-size: 1.1rem;
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+}
+
+.card-main-text {
+    font-weight: bold;
+    font-size: 1rem;
+    margin: 0.25rem 0;
+}
+
+.card-sub-text {
+    font-size: 0.8rem;
+    color: #64748b;
+    margin: 0.25rem 0;
+}
+
+.card-metric-value {
+    font-size: 1.75rem;
+    font-weight: 600;
+    color: #1f2937;
+    margin: 0;
+}
+</style>
+""", unsafe_allow_html=True)
+
+#st.markdown("""
+#<style>
+#    /* Estiliza o contêiner do botão na sidebar */
+#    [data-testid="stSidebar"] [data-testid="stButton"] {
+#        /* Centraliza o conteúdo do botão se necessário (útil para ícones) */
+#        display: flex;
+#        justify-content: center;
+#   }
+#
+#    /* Estiliza o botão real dentro do contêiner */
+#    [data-testid="stSidebar"] [data-testid="stButton"] button {
+#        background-color: #ffffff; /* Cor de fundo do botão */
+#        color: #1c1b1f;             /* Cor do texto do botão */
+#        border: 1px solid #2d3b58;  /* Cor da borda */
+#        border-radius: 0.5rem;      /* Cantos arredondados */
+#        width: 100%;                /* Ocupa toda a largura do contêiner */
+#        transition: 0.2s;           /* Transição suave para o efeito hover */
+#    }
+#
+#   /* Efeito quando o mouse passa por cima do botão (hover) */
+#    [data-testid="stSidebar"] [data-testid="stButton"] button:hover {
+#        background-color: #4e6491; /* Cor de fundo ao passar o mouse */
+#        border-color: #4e6491;      /* Cor da borda ao passar o mouse */
+#        color: #ffffff;             /* Cor do texto ao passar o mouse */
+#    }
+#
+#    /* Efeito quando o botão é clicado (active) */
+#   [data-testid="stSidebar"] [data-testid="stButton"] button:active {
+#        background-color: #1a2233; /* Cor de fundo ao clicar */
+ #       border-color: #1a2233;      /* Cor da borda ao clicar */
+  #  }
+#
+ #   /* Estilo para o botão que está atualmente focado (após clicar, por exemplo) */
+  #  [data-testid="stSidebar"] [data-testid="stButton"] button:focus {
+   #     box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #4e6491; /* Efeito de foco para acessibilidade */
+    #}
+#</style>""", unsafe_allow_html=True)
+
+# 1. Defina as opções e ícones em listas
+opcoes_menu = [
+    "Análises Operacionais",
+    "Painel de eficiência",
+    "Eficiência Combustível",
+    "Análise de Voos Improdutivos Combustivel",
+    "Análise de Voos Improdutivos Passageiros/Bagagem",
+    "Rota e Geografia",
+    "KPIs Gerenciais",
+    # Adicione os outros nomes de abas aqui...
+]
+icones_menu = ["📌", "🔍", "⛽", "📊","🚫","🚫","🌎" ] # Adicione os outros ícones aqui...
+
+# 2. Crie o componente pills 
+pagina_atual = stp.pills(
+    label="Categorias",
+    options=opcoes_menu,
+    icons=icones_menu
+)
 
 # Função para criar big numbers
 def create_big_number_card(title, value, subtitle=""):
@@ -120,11 +214,11 @@ def create_big_number_card(title, value, subtitle=""):
     <div class="metric-card">
         <h3>{value}</h3>
         <p>{title}</p>
-        {f'<small style="opacity: 0.8; color: white;">{subtitle}</small>' if subtitle else ''}
+        {f'<small style="opacity: 0.95; color: white;">{subtitle}</small>' if subtitle else ''}
     </div>
     """, unsafe_allow_html=True)
 
-if st.session_state.aba_ativa == 'home':
+if pagina_atual == 'Análises Operacionais':
     def criar_selectbox_empresa(label, key, conn):
         """
         Cria um selectbox com nomes de empresas formatados e retorna a sigla selecionada
@@ -160,7 +254,7 @@ if st.session_state.aba_ativa == 'home':
         """
         <style>
         [data-testid="stAppViewContainer"] {
-            background-color: #000000;
+            background-color: #f9fafb;
         }
         </style>
         """,
@@ -174,7 +268,7 @@ if st.session_state.aba_ativa == 'home':
         <p style='margin: 0.5rem 0 0 0; opacity: 0.9;'>Visão geral dos dados operacionais</p>
     </div>
     """, unsafe_allow_html=True)
-    
+    st.markdown("""<hr style="border: none; margin: 20px auto;">""",unsafe_allow_html=True)
     # Big Numbers - KPIs principais
     st.markdown("### 📊 Indicadores Principais")
     
@@ -232,93 +326,128 @@ if st.session_state.aba_ativa == 'home':
     st.markdown("---")
     st.markdown("### 🌍 Comparação de Voos Nacionais vs Internacionais")
 
+    # As suas queries para buscar os dados
     query_nacional = """
         SELECT 
-            'NACIONAL' as tipo_voo,
-            COUNT(*) as total_voos,
-            SUM(v.decolagens) as total_decolagens,
-            SUM(v.distancia_voada_km) as total_distancia_km,
-            SUM(v.combustivel_litros) as total_combustivel_litros,
-            SUM(v.horas_voadas) as total_horas_voadas,
-            SUM(c.passageiros_pagos) as total_passageiros_pagos,
-            SUM(c.passageiros_gratis) as total_passageiros_gratis,
-            AVG(v.distancia_voada_km) as media_distancia_km,
+            'NACIONAL' as tipo_voo, COUNT(*) as total_voos, SUM(v.decolagens) as total_decolagens,
+            SUM(v.distancia_voada_km) as total_distancia_km, SUM(v.combustivel_litros) as total_combustivel_litros,
+            SUM(v.horas_voadas) as total_horas_voadas, SUM(c.passageiros_pagos) as total_passageiros_pagos,
+            SUM(c.passageiros_gratis) as total_passageiros_gratis, AVG(v.distancia_voada_km) as media_distancia_km,
             AVG(v.combustivel_litros) as media_combustivel_litros
         FROM voo_nacional v
         LEFT JOIN carga_passageiros c ON v.voo_id = c.voo_id
-        """
+    """
     query_internacional = """
         SELECT 
-            'INTERNACIONAL' as tipo_voo,
-            COUNT(*) as total_voos,
-            SUM(v.decolagens) as total_decolagens,
-            SUM(v.distancia_voada_km) as total_distancia_km,
-            SUM(v.combustivel_litros) as total_combustivel_litros,
-            SUM(v.horas_voadas) as total_horas_voadas,
-            SUM(c.passageiros_pagos) as total_passageiros_pagos,
-            SUM(c.passageiros_gratis) as total_passageiros_gratis,
-            AVG(v.distancia_voada_km) as media_distancia_km,
+            'INTERNACIONAL' as tipo_voo, COUNT(*) as total_voos, SUM(v.decolagens) as total_decolagens,
+            SUM(v.distancia_voada_km) as total_distancia_km, SUM(v.combustivel_litros) as total_combustivel_litros,
+            SUM(v.horas_voadas) as total_horas_voadas, SUM(c.passageiros_pagos) as total_passageiros_pagos,
+            SUM(c.passageiros_gratis) as total_passageiros_gratis, AVG(v.distancia_voada_km) as media_distancia_km,
             AVG(v.combustivel_litros) as media_combustivel_litros
         FROM voo_internacional v
         LEFT JOIN carga_passageiros c ON v.voo_id = c.voo_id
-        """
+    """
     df_nacional = pd.read_sql_query(query_nacional, conn)
     df_internacional = pd.read_sql_query(query_internacional, conn)
-    df_comparacao = pd.concat([df_nacional, df_internacional], ignore_index=True)
 
+    # --- CORREÇÃO: Removidas as linhas duplicadas de st.columns ---
     col1, col2 = st.columns(2)
-    col1, col2 = st.columns(2)
-    col1, col2 = st.columns(2)
+
+    # Card de Voos Nacionais
     with col1:
-        st.markdown("""
-        <div style='background-color: white; padding: 1rem; border-radius: 0.75rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); margin: 0.5rem 0;'>
-            <h3 style='color: #1e40af; text-align: center; margin-bottom: 0.8rem; font-size: 1.2rem;'>🇧🇷 Voos Nacionais</h3>
-        """, unsafe_allow_html=True)
-        if not df_nacional.empty:
-            st.metric("Total Voos", f"{int(df_nacional['total_voos'].iloc[0]):,}")
-            st.metric("Passageiros", f"{int(df_nacional['total_passageiros_pagos'].iloc[0]):,}")
-            st.metric("Distância (km)", f"{df_nacional['total_distancia_km'].iloc[0]:,.0f}")
-        st.markdown("</div>", unsafe_allow_html=True)
+        # Adicionada uma checagem para evitar erro se não houver dados
+        if not df_nacional.empty and pd.notna(df_nacional['total_voos'].iloc[0]):
+            # Prepara as variáveis
+            voos = f"{int(df_nacional['total_voos'].iloc[0]):,}"
+            passageiros = f"{int(df_nacional['total_passageiros_pagos'].iloc[0]):,}"
+            distancia = f"{df_nacional['total_distancia_km'].iloc[0]:,.0f}"
 
+            # --- NOVO HTML PARA O CARD ---
+            html_card_nacional = f"""
+            <div class="custom-card">
+            <h3 class="card-title">🇧🇷 Voos Nacionais</h3>
+            <hr style="width: 80%; text-align: center; border: none; border-top: 1px solid #e2e8f0; margin: 0 0 1rem 0;">
+            
+            <div style="display: flex; width: 100%; justify-content: space-around; margin-bottom: 1rem;">
+                <div>
+                    <p class="card-sub-text">Total Voos</p>
+                    <h2 class="card-metric-value" style="font-size: 1.5rem;">{voos}</h2>
+                    </div>
+                    <div>
+                     <p class="card-sub-text">Passageiros</p>
+                     <h2 class="card-metric-value" style="font-size: 1.5rem;">{passageiros}</h2>
+                    </div>
+                    <div>
+                        <p class="card-sub-text">Distância Total (km)</p>
+                        <h2 class="card-metric-value" style="font-size: 1.5rem;">{distancia}</h2>
+                    </div>
+                </div>
+            </div>"""
+            st.markdown(html_card_nacional, unsafe_allow_html=True)
+        else:
+            # Mostra um card de aviso se não houver dados
+            st.markdown("<div class='custom-card'><h3 class='card-title'>🇧🇷 Voos Nacionais</h3><p>Dados não disponíveis.</p></div>", unsafe_allow_html=True)
+
+    # Card de Voos Internacionais
     with col2:
-        st.markdown("""
-        <div style='background-color: white; padding: 1rem; border-radius: 0.75rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); margin: 0.5rem 0;'>
-            <h3 style='color: #1e40af; text-align: center; margin-bottom: 0.8rem; font-size: 1.2rem;'>🌐 Voos Internacionais</h3>
-        """, unsafe_allow_html=True)
-        if not df_internacional.empty:
-            st.metric("Total Voos", f"{int(df_internacional['total_voos'].iloc[0]):,}")
-            st.metric("Passageiros", f"{int(df_internacional['total_passageiros_pagos'].iloc[0]):,}")
-            st.metric("Distância (km)", f"{df_internacional['total_distancia_km'].iloc[0]:,.0f}")
-        st.markdown("</div>", unsafe_allow_html=True)
+        if not df_internacional.empty and pd.notna(df_internacional['total_voos'].iloc[0]):
+            # Prepara as variáveis
+            voos = f"{int(df_internacional['total_voos'].iloc[0]):,}"
+            passageiros = f"{int(df_internacional['total_passageiros_pagos'].iloc[0]):,}"
+            distancia = f"{int(df_internacional['total_distancia_km'].iloc[0]):,.0f}"
+
+            html_card_internacional = f"""
+            <div class="custom-card">
+                <h3 class="card-title">🌐 Voos Internacionais</h3>
+                <div style='margin-bottom: 1rem;'>
+                    <p class="card-sub-text">Total Voos</p>
+                    <p class="card-metric-value">{voos}</p>
+                </div>
+                <div style='margin-bottom: 1rem;'>
+                    <p class="card-sub-text">Passageiros</p>
+                    <p class="card-metric-value">{passageiros}</p>
+                </div>
+                <div>
+                    <p class="card-sub-text">Distância (km)</p>
+                    <p class="card-metric-value">{distancia}</p>
+                </div>
+            </div>
+            """
+            # --- CORREÇÃO: Chamada correta da função ---
+            st.markdown(html_card_internacional, unsafe_allow_html=True)
+        else:
+            # Mostra um card de aviso se não houver dados
+            st.markdown("<div class='custom-card'><h3 class='card-title'>🌐 Voos Internacionais</h3><p>Dados não disponíveis.</p></div>", unsafe_allow_html=True)
+            
     # Gráficos principais com plotly
     st.markdown("---")
     st.markdown("### 📈 Análises Visuais")
-    
-    # Top empresas por voos
+        
+        # Top empresas por voos
     query_top_empresas = """
-    SELECT 
-        e.empresa_sigla,
-        e.empresa_nome,
-        COUNT(*) as total_voos,
-        SUM(COALESCE(c.passageiros_pagos, 0) + COALESCE(c.passageiros_gratis, 0)) as total_passageiros
-    FROM voo v
-    JOIN empresa e ON v.empresa_sigla = e.empresa_sigla
-    LEFT JOIN carga_passageiros c ON v.voo_id = c.voo_id
-    GROUP BY e.empresa_sigla, e.empresa_nome
-    ORDER BY total_voos DESC
-    LIMIT 10
-    """
-    
+        SELECT 
+            e.empresa_sigla,
+            e.empresa_nome,
+            COUNT(*) as total_voos,
+            SUM(COALESCE(c.passageiros_pagos, 0) + COALESCE(c.passageiros_gratis, 0)) as total_passageiros
+        FROM voo v
+        JOIN empresa e ON v.empresa_sigla = e.empresa_sigla
+        LEFT JOIN carga_passageiros c ON v.voo_id = c.voo_id
+        GROUP BY e.empresa_sigla, e.empresa_nome
+        ORDER BY total_voos DESC
+        LIMIT 10
+        """
+        
     df_top_empresas = pd.read_sql_query(query_top_empresas, conn)
-    
+        
     col1, col2 = st.columns(2)
     
     with col1:
         st.markdown("""
-        <div style='background-color: white; padding: 1.5rem; border-radius: 0.75rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); margin: 1rem 0;'>
-            <h4 style='color: #1e40af; text-align: center; margin-bottom: 1rem; font-size: 1.2rem;'>🏢 Top 10 Empresas por Voos</h4>
+        <div style='background-color: white; padding: 1.5rem; border-radius: 0.75rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); margin: 1rem 0;  border: 0.5px solid #e2e8f0;'>
+            <h4 style='color: #1e40af; text-align: center; font-size: 1.2rem;'>🏢 Top 10 Empresas por Voos</h4>
         """, unsafe_allow_html=True)
-        
+        st.markdown("""<hr style="border: none; margin: 20px auto;">""",unsafe_allow_html=True)
         fig_empresas = px.bar(
             df_top_empresas, 
             x='total_voos', 
@@ -339,10 +468,10 @@ if st.session_state.aba_ativa == 'home':
     
     with col2:
         st.markdown("""
-        <div style='background-color: white; padding: 1.5rem; border-radius: 0.75rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); margin: 1rem 0;'>
-            <h4 style='color: #1e40af; text-align: center; margin-bottom: 1rem; font-size: 1.2rem;'>👥 Passageiros por Empresa</h4>
+        <div style='background-color: white; padding: 1.5rem; border-radius: 0.75rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); margin: 1rem 0; border: 0.5px solid #e2e8f0;'>
+            <h4 style='color: #1e40af; text-align: center; font-size: 1.2rem;'>👥 Passageiros por Empresa</h4>
         """, unsafe_allow_html=True)
-        
+        st.markdown("""<hr style="border: none; margin: 20px auto;">""",unsafe_allow_html=True)
         fig_passageiros = px.bar(
             df_top_empresas, 
             x='total_passageiros', 
@@ -588,52 +717,83 @@ if st.session_state.aba_ativa == 'home':
         df_distancia_empresa = pd.read_sql_query(query_distancia_empresa, conn)
         
         if not df_distancia_empresa.empty:
-            # Top 5 empresas em formato horizontal
-            st.markdown("#### 🏆 Top 5 Empresas por Distância")
-            top_5_empresas = df_distancia_empresa.head(5)
+            # Seleciona no máximo as 5 primeiras
+            top_empresas = df_distancia_empresa.head(5)
             
-            cols = st.columns(5)
-            for i, (_, row) in enumerate(top_5_empresas.iterrows()):
+            # --- MELHORIA AQUI ---
+            # Cria o número de colunas exatamente igual ao número de resultados encontrados
+            num_resultados = len(top_empresas)
+            cols = st.columns(num_resultados)
+
+            for i, (_, row) in enumerate(top_empresas.iterrows()):
                 with cols[i]:
+                    #
+                    # SEU CÓDIGO st.markdown(...) para criar o card vai aqui dentro
+                    # (não precisa mudar nada no código do card em si)
+                    #
+                    if row['natureza'] == 'DOMÉSTICA':
+                        pill_style = "background-color: #275CBD; color: white;"
+                    else:
+                        pill_style = "background-color: #6E45DF; color: white;"
+
                     st.markdown(f"""
-                    <div style='background-color: #f8fafc; padding: 1rem; border-radius: 0.5rem; text-align: center; margin: 0.5rem 0;'>
-                        <h4 style='color: #1e40af; margin: 0; font-size: 1rem;'>{i+1}º</h4>
-                        <p style='margin: 0.25rem 0; font-weight: bold; font-size: 0.9rem;'>{row['empresa_sigla']}</p>
-                        <p style='margin: 0; font-size: 0.8rem; color: #64748b;'>{row['natureza']}</p>
-                        <p style='margin: 0.25rem 0; font-weight: bold; color: #1e40af; font-size: 0.9rem;'>{row['distancia_total']:,.0f} km</p>
-                        <p style='margin: 0; font-size: 0.8rem; color: #64748b;'>{int(row['total_voos']):,} voos</p>
+                    <div class="custom-card">
+                        <p class="card-main-text" style="font-size: 1.1rem; color: #1e40af; margin-bottom: 0.5rem;"> {i+1}º {row['empresa_sigla']} </p>
+                        <span style='{pill_style} padding: 0.2rem 0.8rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; margin: 0.5rem 0;'>
+                            {row['natureza']}
+                        </span>
+                        <p class="card-main-text" style="color: #1e40af;">{row['distancia_total']:,.0f} km</p>
+                        <p class="card-sub-text">{int(row['total_voos']):,} voos</p>
                     </div>
                     """, unsafe_allow_html=True)
-            
+
+        else:
+            st.warning("⚠️ Nenhum dado encontrado para os filtros selecionados.")
+
             # Gráfico de barras para distância por empresa
             top_15_empresas = df_distancia_empresa.head(15)
             
-            fig_dist_empresa = plt.figure(figsize=(12, 6))
-            bars = plt.barh(range(len(top_15_empresas)), 
-                           top_15_empresas['distancia_total'], 
-                           color=['#FF6B6B' if nat == 'DOMÉSTICA' else '#4ECDC4' for nat in top_15_empresas['natureza']])
+            fig_dist_empresa = px.bar(
+                top_15_empresas,
+                x='distancia_total',
+                y='empresa_sigla',
+                orientation='h',
+                color='natureza',  # Colore as barras baseado na coluna 'natureza'
+                title='<b>Top 15 Empresas por Distância Total Voada</b>',
+                text='distancia_total', # Adiciona os valores como texto nas barras
+                labels={
+                    "distancia_total": "Distância Total (km)",
+                    "empresa_sigla": "Empresa Aérea",
+                    "natureza": "Natureza do Voo"
+                },
+                color_discrete_map={
+                    'DOMÉSTICA': "#275CBD",
+                    'INTERNACIONAL': "#6E45DF"
+                },
+                # Adiciona mais dados ao passar o mouse (hover)
+                hover_data={'empresa_nome': True, 'total_voos': True, 'distancia_total': ':.0f'}
+            )
+                # --- AJUSTE NO TEXTO E NO LAYOUT ---
+            fig_dist_empresa.update_traces(textposition='inside', insidetextanchor='middle', texttemplate='%{text:,.0f} km', textfont=dict(size=24, color='white'))
+                # --- Ajustes Finos no Layout ---
+            fig_dist_empresa.update_layout(
+                    # Garante que a barra com maior valor fique no topo
+                    yaxis={'categoryorder':'total ascending'},
+                    
+                    # Melhora a posição da legenda
+                    legend=dict(
+                        orientation="h",
+                        yanchor="bottom",
+                        y=1.02,
+                        xanchor="right",
+                        x=1
+                    )
+                )
+
+            st.plotly_chart(fig_dist_empresa, use_container_width=True)
             
-            plt.yticks(range(len(top_15_empresas)), 
-                      [f"{row['empresa_sigla']}\n({row['natureza']})" for _, row in top_15_empresas.iterrows()])
-            plt.xlabel('Distância Total (km)')
-            plt.title('Top 15 Empresas por Distância Total Voada')
-            plt.gca().invert_yaxis()
-            
-            # Adicionar valores nas barras
-            for i, bar in enumerate(bars):
-                width = bar.get_width()
-                plt.text(width + 0.01 * max(top_15_empresas['distancia_total']), 
-                        bar.get_y() + bar.get_height()/2, 
-                        f'{width:,.0f}', ha='left', va='center', fontsize=8)
-            
-            # Legenda
-            legend_elements = [Patch(facecolor='#FF6B6B', label='Doméstica'),
-                             Patch(facecolor='#4ECDC4', label='Internacional')]
-            plt.legend(handles=legend_elements, loc='lower right')
-            
-            plt.tight_layout()
-            st.pyplot(fig_dist_empresa)
-            
+            # Formata o texto para ter separador de milhar
+            fig_dist_empresa.update_traces(texttemplate='%{text:,.0f}', textposition='outside')
             # Tabela resumo empresas
             st.markdown("#### 📋 Resumo por Empresa")
             df_empresa_display = df_distancia_empresa.copy()
@@ -695,7 +855,7 @@ if st.session_state.aba_ativa == 'home':
             for i, (_, row) in enumerate(top_5_rotas.iterrows()):
                 with cols[i]:
                     st.markdown(f"""
-                    <div style='background-color: #f8fafc; padding: 1rem; border-radius: 0.5rem; text-align: center; margin: 0.5rem 0;'>
+                    <div style='background-color: #f8fafc; border: 1px solid #e2e8f0; padding: 1rem; border-radius: 0.5rem; text-align: center; margin: 0.5rem 0;'>
                         <h4 style='color: #1e40af; margin: 0; font-size: 1rem;'>{i+1}º</h4>
                         <p style='margin: 0.25rem 0; font-weight: bold; font-size: 0.9rem;'>{row['rota']}</p>
                         <p style='margin: 0; font-size: 0.8rem; color: #64748b;'>{row['natureza']}</p>
@@ -704,35 +864,59 @@ if st.session_state.aba_ativa == 'home':
                         <p style='margin: 0; font-size: 0.8rem; color: #64748b;'>{int(row['num_empresas'])} empresas</p>
                     </div>
                     """, unsafe_allow_html=True)
-            
-            # Gráfico de barras para rotas
+            st.markdown("""<hr style="border: none; margin: 20px auto;">""",unsafe_allow_html=True)
+
+                # Gráfico de barras para rotas
             top_20_rotas = df_distancia_rota.head(20)
-            
-            fig_dist_rota = plt.figure(figsize=(12, 8))
-            bars = plt.barh(range(len(top_20_rotas)), 
-                           top_20_rotas['distancia_total'],
-                           color=['#FF6B6B' if nat == 'DOMÉSTICA' else '#4ECDC4' for nat in top_20_rotas['natureza']])
-            
-            plt.yticks(range(len(top_20_rotas)), 
-                      [f"{row['rota']}\n({row['natureza']})" for _, row in top_20_rotas.iterrows()])
-            plt.xlabel('Distância Total (km)')
-            plt.title('Top 20 Rotas por Distância Total Voada')
-            plt.gca().invert_yaxis()
-            
-            # Adicionar valores nas barras
-            for i, bar in enumerate(bars):
-                width = bar.get_width()
-                plt.text(width + 0.01 * max(top_20_rotas['distancia_total']), 
-                        bar.get_y() + bar.get_height()/2, 
-                        f'{width:,.0f}', ha='left', va='center', fontsize=7)
-            
-            # Legenda
-            legend_elements = [Patch(facecolor='#FF6B6B', label='Doméstica'),
-                             Patch(facecolor='#4ECDC4', label='Internacional')]
-            plt.legend(handles=legend_elements, loc='lower right')
-            
-            plt.tight_layout()
-            st.pyplot(fig_dist_rota)
+                
+            fig_dist_rota = px.bar(
+                top_20_rotas,
+                x='distancia_total',
+                y='rota',
+                orientation='h',
+                color='natureza',
+                title='<b>Top 20 Rotas por Distância Total Voada</b>',
+                text='distancia_total',
+                labels={
+                    "distancia_total": "Distância Total (km)",
+                    "rota": "Rota",
+                    "natureza": "Tipo de Voo"
+                },
+                # Usando as mesmas cores do seu código Matplotlib original
+                color_discrete_map={
+                    'DOMÉSTICA': '#275CBD',
+                    'INTERNACIONAL': '#704DE6'
+                },
+                # Informações extras que aparecerão ao passar o mouse
+                hover_data={
+                    'nome_origem': True,
+                    'nome_destino': True,
+                    'total_voos': True,
+                    'distancia_total': ':.0f' # Formata o número no hover
+                }
+            )
+
+            # --- Ajustes Finos no Layout do Gráfico ---
+            fig_dist_rota.update_layout(
+                # Garante que a barra com maior valor fique no topo
+                yaxis={'categoryorder':'total ascending'},
+                # Aumenta a altura para as 20 rotas caberem confortavelmente
+                height=700,
+                # Posiciona a legenda de forma elegante acima do gráfico
+                legend=dict(
+                    orientation="h",
+                    yanchor="bottom",
+                    y=1.01,
+                    xanchor="right",
+                    x=1
+                )
+            )
+
+            # --- AJUSTE NO TEXTO E NO LAYOUT ---
+            fig_dist_rota.update_traces(textposition='inside', insidetextanchor='middle', texttemplate='%{text:,.0f} km', textfont=dict(size=24, color='white'))
+
+            # Exibe o novo gráfico interativo no Streamlit
+            st.plotly_chart(fig_dist_rota, use_container_width=True)
             
             # Tabela resumo rotas
             st.markdown("#### 📋 Resumo por Rota")
@@ -756,8 +940,10 @@ if st.session_state.aba_ativa == 'home':
         else:
             st.warning("⚠️ Nenhum dado de rota encontrado para os filtros selecionados.")
 
+elif pagina_atual == 'Painel de eficiência':
 
-if st.session_state.aba_ativa == 'painel_eficiencia':
+    # Aplicar CSS customizado apenas na home
+    st.markdown(home_css, unsafe_allow_html=True)
     query = '''
         SELECT 
             v.empresa_sigla,
@@ -1193,9 +1379,8 @@ if st.session_state.aba_ativa == 'painel_eficiencia':
 
         plt.tight_layout()
         st.pyplot(fig)
-
 # Manter as outras abas como estavam originalmente
-if st.session_state.aba_ativa == 'eficiencia_comb':
+elif pagina_atual == 'Eficiência Combustível':
 
         st.markdown(
             """
@@ -1312,7 +1497,7 @@ if st.session_state.aba_ativa == 'eficiencia_comb':
             col2.metric(label=worst_rotas.iloc[1]['rota'], value=f"{worst_rotas.iloc[1]['eficiencia_km_por_litro']:.2f} km/l")
             col3.metric(label=worst_rotas.iloc[2]['rota'], value=f"{worst_rotas.iloc[2]['eficiencia_km_por_litro']:.2f} km/l")
 
-if st.session_state.aba_ativa == 'voos_impro':
+elif pagina_atual == 'Análise de Voos Improdutivos Combustivel':
         st.markdown(
             """
             <style>
@@ -1404,7 +1589,7 @@ if st.session_state.aba_ativa == 'voos_impro':
                                 st.write("Voos improdutivos por região:")
                                 st.bar_chart(regioes_improdutivas)
                                 
-if st.session_state.aba_ativa == 'voos_impro_pas':
+elif pagina_atual == 'Análise de Voos Improdutivos Passageiros/Bagagem':
     def consulta_carga_passageiros_por_empresa(empresa_sigla=None):
         query = '''
         SELECT 
@@ -1542,7 +1727,8 @@ if st.session_state.aba_ativa == 'voos_impro_pas':
     # Exibir dados filtrados
     st.write("Voos com 50% ou mais de passageiros grátis:")
     st.dataframe(df_50_gratis[['ano', 'mes', 'empresa_sigla', 'aeroporto_origem_sigla', 'aeroporto_destino_sigla', 'passageiros_pagos', 'passageiros_gratis', 'percentual_gratis']])
-if st.session_state.aba_ativa == 'rotas':
+
+elif pagina_atual == 'Rota e Geografia':
     st.title("Rotas")
     conn = sqlite3.connect("dados_voo.db")
 
@@ -1759,7 +1945,7 @@ if st.session_state.aba_ativa == 'rotas':
     - Ex: fluxo grosso de *Sudeste → Nordeste* = muitos voos nessa rota.
     """)
 #aba de kpis gerenciais
-if st.session_state.aba_ativa == 'kpis':
+elif pagina_atual == 'KPIs Gerenciais':
     st.markdown(
         """
         <style>
@@ -2147,4 +2333,5 @@ if st.session_state.aba_ativa == 'kpis':
                 df_display['passageiros_por_km'] = df_display['passageiros_por_km'].round(2)
             
             st.dataframe(df_display, use_container_width=True, height=400)
+
 conn.close()
