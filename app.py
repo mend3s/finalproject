@@ -22,7 +22,6 @@ st.set_page_config(
 )
 
 # --- Estilos CSS ---
-# (Seu código CSS continua o mesmo, omitido aqui para brevidade)
 st.markdown("""
 <style>
 /* --- ESTILO BASE DO CARD --- */
@@ -55,27 +54,22 @@ st.markdown("""
 # --- Título Principal ---
 st.title("🕵️ DASHBOARD DE ANÁLISE DE FRAUDES")
 
-
-# --- Lógica de Navegação ---
-# CORREÇÃO 1: Adicionado um ícone para a quarta opção do menu.
 opcoes_menu = ["Visão Geral", "Analise Exploratoria", "Análise Direcionada", "Resumo Estratégico"]
-icones_menu = ["💡", "🔬", "🎯", "🏆"] # 4 opções, 4 ícones
+icones_menu = ["💡", "🔬", "🎯", "🏆"] 
 
-# MELHORIA 1: Lógica de inicialização simplificada
 if 'pagina_selecionada' not in st.session_state:
     st.session_state.pagina_selecionada = opcoes_menu[0]
 
-# O componente 'pills' agora gerencia a seleção.
 pagina_atual = stp.pills(
     label="Navegue pelas fases do projeto:",
     options=opcoes_menu,
     icons=icones_menu,
-    # A chave do componente foi renomeada para ser mais descritiva.
+    
     key="menu_navegacao",
-    # Usamos o estado da sessão para manter a seleção consistente.
+    
     index=opcoes_menu.index(st.session_state.pagina_selecionada)
 )
-# Atualiza o estado da sessão com a seleção atual do usuário.
+
 st.session_state.pagina_selecionada = pagina_atual
 
 if pagina_atual == "Visão Geral":
