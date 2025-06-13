@@ -23,6 +23,8 @@ st.set_page_config(
     page_icon="✈️",
     layout="wide"
 )
+
+
 home_css = """
 <style>
     /* Metrics styling */
@@ -34,38 +36,35 @@ home_css = """
         box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
         text-align: center;
     }
-   
-    /* Big numbers styling */
+/* Big numbers styling */
     .metric-card {
-        background: white:
+        background: white;
         padding: 1.5rem;
         border-radius: 1rem;
-        color: #1c1b1f;
+        color: white;
+        text-align: center;
         margin: 0.5rem 0;
         border: 0.5px solid #e2e8f0;
-        border-left: 4px solid #6648E6; /* Borda padrão, será sobrescrita pela cor específica */
-        text-align: center;
-        textfont-color: #1c1b1f;
-        aligh: center;
-       
+        border-left: 8px solid #6648E6; /* Borda padrão, será sobrescrita pela cor específica */
+        align: center;
     }
-   
+    
     .metric-card h3 {
         margin: 0;
         font-size: 2.5rem;
         font-weight: bold;
-        color: #1c1b1f;
+        color: #6648E6;
         align: center;
     }
-   
+    
     .metric-card p {
         margin: 0.5rem 0 0 0;
         font-size: 1rem;
         opacity: 0.9;
-        color: #1c1b1f;
+        color: #6648E6;
         align: center;
     }
-   
+    
     /* Section headers */
     .section-header {
         background: linear-gradient(90deg, #1e40af 0%, #3b82f6 100%);
@@ -75,7 +74,7 @@ home_css = """
         margin: 2rem 0 1rem 0;
         text-align: center;
     }
-   
+    
     /* Chart containers */
     .chart-container {
         background-color: #f9f9f9;
@@ -84,14 +83,13 @@ home_css = """
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         margin: 1rem 0;
     }
-   
+    
     .chart-container h4 {
-        color: #1c1b1f;
+        color: #1e40af;
+        text-align: center;
         margin-bottom: 1rem;
-     
     }
-</style>
-"""
+</style>"""
 
 
 st.markdown("""
